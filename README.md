@@ -28,7 +28,37 @@ It is recommended to complete this assignment in a group of 2-4 students.
 Checklist/TODOs: 
 * Update the following during each week prac session
   # Week 1
- From the first week, after forming our team, we began searching for a stakeholder to develop a website. We found one and conducted an interview with him, during which he expressed interest in creating a recipe website. Based on the interview, we developed user stories that helped us identify key features such as a login page, pantry management system, shopping list, recipe suggestions based on available pantry items, an option to save favorite recipes, and features showing nutrition facts and personalized recommendations.
+ From the first week, after forming our team, we began searching for a stakeholder to develop a website. We found one and conducted an interview with him, during which he expressed interest in creating a recipe website. Based on the interview, we developed user stories that helped us identify key features such as a login page, pantry management system, shopping list, recipe suggestions based on available pantry items, an option to save favorite recipes, and features showing nutrition facts and personalized recommendations. 
+
+ # Week 2
+In the second week, we divided tasks among team members, assigning specific areas for each person to focus on. After that, we came together for a blue-sky brainstorming session to generate creative ideas and define the main features of our project. At the end of the session, we conducted a planning poker activity to estimate how many days each interface would take to complete and used these estimates to calculate the project’s velocity, which we recorded and planned to upload to GitHub.
+
+**Blue-sky Brainstorming Ideas:**
+
+* Combined shopping list and pantry
+* AI-generated recipe recommendations
+* Add and connect with friends
+* Share recipes with friends
+* Upload personal recipes
+* Blog-style recipe posts
+* Meal planner
+* Expiry-date tracking
+* Prioritize fruits and vegetables
+* Barcode scanning for item identification
+* Rating system for items
+
+**Key Features and Estimates (Planning Poker):**
+
+* Login Page – 1
+* Pantry Management – 3.6
+* Shopping List – 3
+* Recipe Generator – 5.6
+* Save Favorite Recipes – 3.8
+* Nutrition Facts – 2.8
+* Upload Your Own Recipes – 3.2
+* Categorization – 4
+
+These estimations were documented as part of our planning process and included in our GitHub repository to track progress and team velocity.
 
   
 * github entry timestamp is BEFORE the iteration-1
