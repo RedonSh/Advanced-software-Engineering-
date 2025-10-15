@@ -27,6 +27,10 @@ It is recommended to complete this assignment in a group of 2-4 students.
 # Project planning BEFORE iteration-1, (see chapters 1-3)
 Checklist/TODOs: 
 * Update the following during each week prac session
+  # Week 1
+ From the first week, after forming our team, we began searching for a stakeholder to develop a website. We found one and conducted an interview with him, during which he expressed interest in creating a recipe website. Based on the interview, we developed user stories that helped us identify key features such as a login page, pantry management system, shopping list, recipe suggestions based on available pantry items, an option to save favorite recipes, and features showing nutrition facts and personalized recommendations.
+
+  
 * github entry timestamp is BEFORE the iteration-1
 * User stories are correct: see p39
 * Must have more user stories than fits into iterations 1 and 2. To practice the priority.
