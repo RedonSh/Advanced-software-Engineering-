@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RecipeSite — Recipes</title>
+  <link rel="stylesheet" href="css/recipes.css" />
+  <script defer src="js/common.js"></script>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <div class="nav">
+        <nav>
+          <a href="#browse" id="tab-browse">Browse</a>
+          <a href="#generator" id="tab-generator">Generator</a>
+          <a href="#favourites" id="tab-favourites">Favourites</a>
+          <a href="#nutrition" id="tab-nutrition">Nutrition</a>
+        </nav>
+        <div class="auth">
+          <span class="pill" id="userBadge" hidden></span>
+          <a class="btn" id="loginLink" href="login.html?next=recipes.html#browse">Login</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container" id="app">
+    <!-- BROWSE -->
+    <section class="route" data-route="browse">
+      <div class="card grid two">
+        <label class="field"><span>Search</span>
+          <input id="q" placeholder="Search by title or ingredient" />
+        </label>
+        <label class="field"><span>Category</span>
+          <select id="cat"></select>
+        </label>
+      </div>
+      <div class="grid three" id="browseGrid"></div>
+    </section>
+
+    <!-- GENERATOR -->
+    <section class="route" data-route="generator" hidden>
+      <div class="card">
+        <h1>Recipe Generator</h1>
+        <div class="grid two">
+          <label class="field"><span>Category</span>
+            <select id="genCategory"></select>
+          </label>
+          <label class="field"><span>Key ingredient (optional)</span>
+            <input id="genIngredient" placeholder="e.g. chicken, tofu, tomato" />
+          </label>
+        </div>
+        <div class="row">
+          <button class="btn" id="generateBtn">Generate</button>
+          <button class="btn outline" id="surpriseBtn">Surprise Me</button>
+        </div>
+      </div>
+      <div class="card" id="generated"></div>
+    </section>
+
+    <!-- FAVOURITES -->
+    <section class="route" data-route="favourites" hidden>
+      <div class="card">
+        <h1>Your Favourites</h1>
+        <p class="muted">Saved per user.</p>
+        <div class="row">
+          <button class="btn" id="logoutBtn">Logout</button>
+        </div>
+      </div>
+      <div class="grid three" id="favGrid"></div>
+    </section>
+
+    <!-- NUTRITION -->
+    <section class="route" data-route="nutrition" hidden>
+      <div class="card">
+        <h1>Recipe Nutrition</h1>
+        <label class="field"><span>Recipe</span>
+          <select id="nutriSelect"></select>
+        </label>
+        <label class="field"><span>Servings</span>
+          <input id="servings" type="number" min="1" value="1" />
+        </label>
+      </div>
+      <div class="card" id="nutritionPanel"></div>
+    </section>
+  </main>
+
+  <script>
+    // ---- Tabs / routing
+    const routes = Array.from(document.querySelectorAll('.route'));
+    function showRoute() {
+      const hash = (location.hash || '#browse').replace('#','');
+      routes.forEach(s => s.hidden = s.dataset.route !== hash);
+      document.querySelectorAll('nav a').forEach(a => {
+        a.classList.toggle('active', a.getAttribute('href') === '#'+hash);
+      });
+      if (hash === 'browse') renderBrowse();
+      if (hash === 'generator') initGenerator();
+      if (hash === 'favourites') renderFavourites();
+      if (hash === 'nutrition') initNutrition();
+    }
+    window.addEventListener('hashchange', showRoute);
+
+    // ---- Auth badge & login link
+    function updateUserUI(){
+      const badge = document.getElementById('userBadge');
+      const link = document.getElementById('loginLink');
+      const u = RecipeSite.getUser();
+      if (u) {
+        badge.hidden = false; badge.textContent = `👤 ${u.name}`;
+        link.textContent = 'Logout'; link.href = '#';
+        link.onclick = (e)=>{ e.preventDefault(); RecipeSite.logout(); updateUserUI(); renderFavourites(); };
+      } else {
+        badge.hidden = true;
+        link.textContent = 'Login';
+        link.href = 'login.html?next=recipes.html' + (location.hash || '#browse');
+        link.onclick = null;
+      }
+    }
+
+    // ---- Browse
+    const q = document.getElementById('q');
+    const cat = document.getElementById('cat');
+    const browseGrid = document.getElementById('browseGrid');
+    function initBrowse(){
+      if (!cat.options.length) {
+        RecipeSite.listCategories().forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; cat.appendChild(o); });
+        cat.value='All';
+        q.addEventListener('input', renderBrowse);
+        cat.addEventListener('change', renderBrowse);
+      }
+    }
+    function renderBrowse(){
+      initBrowse();
+      const query = (q.value||'').toLowerCase().trim();
+      const category = cat.value;
+      const res = RecipeSite.listRecipes().filter(r=>{
+        const mq = !query || r.title.toLowerCase().includes(query) || r.ingredients.some(i=>i.toLowerCase().includes(query));
+        const mc = category==='All' || r.category===category;
+        return mq && mc;
+      });
+      browseGrid.innerHTML = '';
+      res.forEach(r => browseGrid.appendChild(cardNode(r)));
+      syncFavButtons(browseGrid);
+    }
+
+    // ---- Generator
+    let genInit = false;
+    function initGenerator(){
+      if (genInit) return;
+      const catSel = document.getElementById('genCategory');
+      RecipeSite.listCategories().forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; catSel.appendChild(o); });
+      catSel.value = 'All';
+      const genInput = document.getElementById('genIngredient');
+      const out = document.getElementById('generated');
+      function pool(){
+        const cat = catSel.value; const key = (genInput.value||'').toLowerCase().trim();
+        return RecipeSite.listRecipes().filter(r =>
+          (cat==='All'||r.category===cat) &&
+          (!key || r.ingredients.some(i=>i.toLowerCase().includes(key)) || r.title.toLowerCase().includes(key))
+        );
+      }
+      function render(r){
+        if(!r){ out.innerHTML = '<p class="muted">No match. Try another filter.</p>'; return; }
+        out.innerHTML = ''; out.appendChild(cardNode(r)); syncFavButtons(out);
+      }
+      document.getElementById('generateBtn').onclick = ()=>{ const p=pool(); if(!p.length) return render(null); render(p[Math.floor(Math.random()*p.length)]); };
+      document.getElementById('surpriseBtn').onclick = ()=>{ const all=RecipeSite.listRecipes(); render(all[Math.floor(Math.random()*all.length)]); };
+      genInit = true;
+    }
+
+    // ---- Favourites
+    const favGrid = document.getElementById('favGrid');
+    function renderFavourites(){
+      const u = RecipeSite.getUser();
+      if (!u) { favGrid.innerHTML = '<p class="muted">Please log in first.</p>'; return; }
+      const set = RecipeSite.getFavSet();
+      const items = RecipeSite.listRecipes().filter(r => set.has(r.id));
+      favGrid.innerHTML = '';
+      if (!items.length){ favGrid.innerHTML = '<p class="muted">No favourites yet.</p>'; }
+      items.forEach(r => favGrid.appendChild(cardNode(r)));
+      syncFavButtons(favGrid);
+      document.getElementById('logoutBtn').onclick = ()=>{ RecipeSite.logout(); updateUserUI(); renderFavourites(); };
+    }
+
+    // ---- Nutrition
+    const nutriSelect = document.getElementById('nutriSelect');
+    const nutritionPanel = document.getElementById('nutritionPanel');
+    const servingsInput = document.getElementById('servings');
+    let nutriInit = false;
+    function initNutrition(){
+      if (!nutriInit) {
+        RecipeSite.listRecipes().forEach(r => {
+          const o=document.createElement('option'); o.value=r.id; o.textContent=r.title; nutriSelect.appendChild(o);
+        });
+        nutriSelect.addEventListener('change', updateNutrition);
+        servingsInput.addEventListener('input', updateNutrition);
+        nutriInit = true;
+      }
+      updateNutrition();
+    }
+    function updateNutrition(){
+      const r = RecipeSite.getRecipeById(nutriSelect.value) || RecipeSite.listRecipes()[0];
+      const s = Math.max(1, parseInt(servingsInput.value||'1', 10));
+      const n = r.nutrition; const tot = { calories:n.calories*s, protein:n.protein*s, carbs:n.carbs*s, fat:n.fat*s };
+      nutritionPanel.innerHTML = `
+        <h2>${r.title}</h2>
+        <p class="muted">Per serving and totals for <strong>${s}</strong> ${s===1?'serving':'servings'}.</p>
+        <div class="grid two" style="margin-top:10px">
+          <div class="card"><strong>Per Serving</strong><ul><li>Calories: ${n.calories}</li><li>Protein: ${n.protein} g</li><li>Carbs: ${n.carbs} g</li><li>Fat: ${n.fat} g</li></ul></div>
+          <div class="card"><strong>Total</strong><ul><li>Calories: ${tot.calories}</li><li>Protein: ${tot.protein} g</li><li>Carbs: ${tot.carbs} g</li><li>Fat: ${tot.fat} g</li></ul></div>
+        </div>`;
+    }
+
+    // ---- Card factory + fav sync
+    function cardNode(r){
+      const wrap = document.createElement('article'); wrap.className = 'card';
+      wrap.innerHTML = `
+        <div class="thumb" style="background-image:url('${r.image}')"></div>
+        <div class="row">
+          <h2>${r.title}</h2>
+          <button class="btn small" data-fav="${r.id}">☆ Save</button>
+        </div>
+        <div class="pill cat">${r.category}</div>
+        <p class="muted">Ingredients: ${r.ingredients.slice(0,4).join(', ')}...</p>
+        <div class="row">
+          <a class="btn small outline" href="#nutrition" data-nutri="${r.id}">Nutrition</a>
+        </div>`;
+      wrap.querySelector('[data-fav]').onclick = ()=>{ RecipeSite.toggleFav(r.id); syncFavButtons(wrap); };
+      wrap.querySelector('[data-nutri]').onclick = (e)=>{ e.preventDefault(); location.hash='nutrition';
+        setTimeout(()=>{ const pick=document.getElementById('nutriSelect'); if(pick){ pick.value=r.id; updateNutrition(); }}, 0);
+      };
+      return wrap;
+    }
+    function syncFavButtons(scope=document){
+      const set = RecipeSite.getFavSet();
+      scope.querySelectorAll('[data-fav]').forEach(btn=>{
+        const on = set.has(btn.getAttribute('data-fav'));
+        btn.textContent = on ? '★ Saved' : '☆ Save';
+        btn.classList.toggle('saved', on);
+      });
+    }
+
+    // Boot
+    if (!location.hash) location.hash = '#browse';
+    updateUserUI();
+    showRoute();
+  </script>
+
+  <noscript>Enable JavaScript to view the app.</noscript>
+</body>
+</html>

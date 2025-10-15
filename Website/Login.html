@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RecipeSite — Login</title>
+  <link rel="stylesheet" href="css/login.css" />
+  <script defer src="js/common.js"></script>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <nav>
+        <a href="recipes.html#browse">Browse</a>
+        <a href="recipes.html#generator">Generator</a>
+        <a href="recipes.html#favourites">Favourites</a>
+        <a href="recipes.html#nutrition">Nutrition</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="card">
+      <h1>Login</h1>
+      <p class="muted">Mock client-side login. Replace with real auth later.</p>
+      <form id="loginForm" class="grid two">
+        <label class="field">
+          <span>Username</span>
+          <input id="username" required placeholder="e.g. redon" />
+        </label>
+        <label class="field">
+          <span>Password</span>
+          <input id="password" type="password" required placeholder="••••••" />
+        </label>
+        <button class="btn" style="grid-column:1/-1">Login</button>
+      </form>
+    </div>
+  </main>
+
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = document.getElementById('username').value.trim();
+      if (!name) { alert('Username required'); return; }
+      RecipeSite.setUser({ name });
+      const params = new URLSearchParams(location.search);
+      const next = params.get('next');
+      location.href = next || 'recipes.html#favourites';
+    });
+  </script>
+</body>
+</html>
