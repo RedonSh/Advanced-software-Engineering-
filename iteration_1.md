@@ -14,7 +14,7 @@ Number of developers: ??
 = 5 Developers
 
 * Total estimated amount of work: YY days
-53 * 3 = 159 days (Amount of works in days)
+53 (Amount of works in days)
 
 User stories or tasks (see chapter 4):
 
@@ -61,10 +61,10 @@ Date : 15/10/25
 Update this at least once per week
 
 7/10/25
-7 weeks left, 159 days
+2 weeks left, 14 days
 
 15/10/25
-6 weeks left, 140 days of estimated amount of work 
+1 weeks left, 7days of estimated amount of work 
 
 * 2 weeks left, xx days
 * 1 weeks left, xx days
