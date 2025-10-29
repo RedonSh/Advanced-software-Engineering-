@@ -44,29 +44,13 @@
   </main>
 
   <script>
-    // Mock login handler
     document.getElementById('loginForm').addEventListener('submit', (e) => {
       e.preventDefault();
       const name = document.getElementById('username').value.trim();
-<<<<<<< HEAD
       if (!name) { alert('Please enter a username'); return; }
       RecipeSite.setUser({ name });
       const next = new URLSearchParams(location.search).get('next') || 'recipes.html#browse';
       location.href = next;
-=======
-      if (!name) {
-        alert('Username required');
-        return;
-      }
-
-      // Save user in localStorage
-      RecipeSite.setUser({ name });
-
-      // Redirect to next page or default to favourites
-      const params = new URLSearchParams(location.search);
-      const next = params.get('next');
-      location.href = next || 'recipes.html#favourites';
->>>>>>> 4bc8796bff9dbf78ba67c666f9cc1c6990e4537c
     });
   </script>
 </body>
