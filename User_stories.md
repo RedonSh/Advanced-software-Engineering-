@@ -1,42 +1,26 @@
-Create more md files like this one as needed. Place them into the same folder 
-as this [user_stories folder](./)
-
-# User story title: Auth & Profile
-Keep any other version here as well, e.g. Display current deals, Let user to click on "show-current-deals".
-
-## Priority: 1 (e.g. latest for iteration-1)
-Any notes on priority go here. 
-Note you may have different priorities at different stages of you project.
-Again, keep all changes here for marking.
-
-## Estimation: e.g. 2 days
-Any notes on estimation go here. Keep your planning poker game numbers. For example
-* Nathan: 8 days (e.g. estimated before iteration-1)
-* Radahn: 1 day
-* Sabjay: 1 day
-* Tobden: 1/2 day
-
-## Assumptions (if any):
-
-* Learning to implement the database may take awhile
-
-## Description: e.g. The web page will show current deals to Orion's orbits users
-The site will require the user to login to the app/product
-
-Description-v1: e.g. The web site will show current deals to Orion's orbits users
-
-## Tasks, see chapter 4.
-
-1. Task 1, Create a Login page,Estimation 2 days
-2. Task 2, Pantry Management(Sorting) feature, Estimation 2 days
-
-
-# UI Design:
-* (New, not in the textbook) 
-* Many user stories are connected to a User interface.
-* Insert a mockup design screenshot using any prototyping tools, e.g. [https://ninjamock.com/](https://ninjamock.com/)
-
-# Completed:
-* (New, not in the textbook) 
-* Insert screenshots of completed. 
-* If you have multiple versions (changes between iteractions), show them all.
+User Stories 
+## Auth & Profile
+As a user, I can register and log in, so that my pantry, preferences, and saved recipes are secure and personalized.
+As a user, I can set my dietary restrictions and nutrition goals (e.g., vegan, halal, low-sodium), so that the app only suggests recipes that fit my needs.
+Pantry Management
+As a user, I can add, edit, or remove pantry items with quantity, unit, and expiry date, so that I know what ingredients I have at home.
+As a user, I can see suggestions for commonly used pantry items, so that adding items is faster.
+As a user, I want the app to highlight items that are expired or running low, so I avoid cooking failures and waste.
+Recipe Generation
+As a user, I can generate recipes based on my pantry items and dietary constraints, so that I can cook meals with what I have.
+As a user, I want recipes to indicate preparation time, servings, and steps, so that I can plan efficiently.
+As a user, I want allergens flagged and dietary compliance enforced, so that I can safely follow my restrictions.
+Healthy Swaps / Nutrition
+As a user, I can see suggested ingredient swaps to make recipes healthier, so that I can improve nutrition without extra effort.
+As a user, I can view macros and calories per serving, so that I can track nutrition and meet my goals.
+As a user, I want swaps to respect my dietary restrictions, so I can trust the app.
+Shopping & Meal Planning
+As a user, I can create a shopping list from selected recipes, so that I know exactly what to buy.
+As a user, I can see which ingredients I already have, so that I don’t buy unnecessary items.
+As a user, I can optionally create a weekly meal plan, so that cooking is organized and waste is reduced.
+Saving & Sharing
+As a user, I can save my favorite recipes, so that I can access them later.
+As a user, I can rate recipes (1–5) and leave comments, so that I can track what I liked.
+As a user, I can share recipes or export them as PDF cards, so that friends or family can cook from them.
+AI & Trust
+As a user, I can trust AI-generated swaps and recipes if the app shows nutritional impact and clear explainations, so that i feel confident using suggestions
