@@ -12,8 +12,10 @@
     <div class="container">
       <div class="nav">
         <nav>
+          
           <a href="#browse" id="tab-browse">Browse</a>
           <a href="#generator" id="tab-generator">Generator</a>
+          <a href="#pantry" id="tab-pantry">Pantry</a>
           <a href="#favourites" id="tab-favourites">Favourites</a>
           <a href="#nutrition" id="tab-nutrition">Nutrition</a>
         </nav>
@@ -68,6 +70,30 @@
           <button class="btn" id="logoutBtn">Logout</button>
         </div>
       </div>
+
+      <!-- 👇 Added Upload Feature -->
+      <div class="card" id="uploadSection">
+        <h2>Add Your Own Recipe</h2>
+        <div class="grid two">
+          <label class="field"><span>Title</span>
+            <input id="myTitle" placeholder="Recipe title" />
+          </label>
+          <label class="field"><span>Category</span>
+            <input id="myCategory" placeholder="e.g. Breakfast, Dinner" />
+          </label>
+        </div>
+        <label class="field"><span>Ingredients (comma-separated)</span>
+          <input id="myIngredients" placeholder="e.g. egg, flour, milk" />
+        </label>
+        <label class="field"><span>Image URL</span>
+          <input id="myImage" placeholder="Paste an image link" />
+        </label>
+        <div class="row">
+          <button class="btn" id="myAddRecipeBtn">Add Recipe</button>
+        </div>
+      </div>
+      <!-- 👆 End of Upload Feature -->
+
       <div class="grid three" id="favGrid"></div>
     </section>
 
@@ -84,6 +110,42 @@
       </div>
       <div class="card" id="nutritionPanel"></div>
     </section>
+
+    <!-- PANTRY -->
+   
+    <section class="route" data-route="pantry" hidden>
+      <h1>My Pantry</h1>
+
+      <!-- ✅ Top: Existing ingredients -->
+      <div class="card">
+        <h2>Available Ingredients</h2>
+        <div id="pantryList">
+          <!-- Rendered pantry items will appear here -->
+        </div>
+      </div>
+
+      <!-- ✅ Bottom: Add new ingredient -->
+      <div class="card">
+        <h2>Add Ingredient</h2>
+        <div class="grid two">
+          <label class="field"><span>Ingredient</span>
+            <input id="pantryName" placeholder="e.g. Tomato" />
+          </label>
+          <label class="field"><span>Quantity</span>
+            <input id="pantryQty" type="text" placeholder="e.g. 3 pcs, 500g" />
+          </label>
+          <label class="field"><span>Expiry Date</span>
+            <input id="pantryExpiry" type="date" />
+          </label>
+        </div>
+        <div class="row">
+          <button class="btn" id="addPantryBtn">Add Ingredient</button>
+        </div>
+      </div>
+</section>
+
+
+
   </main>
 
   <script>
@@ -245,7 +307,176 @@
     // Boot
     if (!location.hash) location.hash = '#browse';
     updateUserUI();
-    showRoute();
+    showRoute() ; 
+
+
+    // ============================================================
+    // ✅ ADDITIONAL FEATURE: User Upload Recipe (Standalone)
+    // ============================================================
+    const myAddRecipeBtn = document.getElementById('myAddRecipeBtn');
+    const favGridSection = document.getElementById('favGrid');
+
+    if (myAddRecipeBtn) {
+      myAddRecipeBtn.addEventListener('click', () => {
+        const title = document.getElementById('myTitle').value.trim();
+        const category = document.getElementById('myCategory').value.trim() || 'Misc';
+        const ingredients = document.getElementById('myIngredients').value.split(',').map(i => i.trim()).filter(Boolean);
+        const image = document.getElementById('myImage').value.trim() || 'img/default.jpg';
+
+        if (!title || ingredients.length === 0) {
+          alert('Please fill in at least a title and one ingredient.');
+          return;
+        }
+
+        const recipe = {
+          id: 'user-' + Date.now(),
+          title,
+          category,
+          ingredients,
+          image,
+          nutrition: { calories: 0, protein: 0, carbs: 0, fat: 0 }
+        };
+
+        // Save in localStorage without touching existing data
+        const userRecipes = JSON.parse(localStorage.getItem('userRecipes') || '[]');
+        userRecipes.push(recipe);
+        localStorage.setItem('userRecipes', JSON.stringify(userRecipes));
+
+        // Display immediately
+        const card = document.createElement('article');
+        card.className = 'card';
+        card.innerHTML = `
+          <div class="thumb" style="background-image:url('${image}')"></div>
+          <div class="row"><h2>${title}</h2></div>
+          <div class="pill cat">${category}</div>
+          <p class="muted">Ingredients: ${ingredients.join(', ')}</p>
+        `;
+        favGridSection.prepend(card);
+
+        // Clear form
+        document.getElementById('myTitle').value = '';
+        document.getElementById('myCategory').value = '';
+        document.getElementById('myIngredients').value = '';
+        document.getElementById('myImage').value = '';
+
+        alert('Recipe added!');
+      });
+    }
+
+    // Load saved user recipes on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      const favGridSection = document.getElementById('favGrid');
+      const userRecipes = JSON.parse(localStorage.getItem('userRecipes') || '[]');
+      userRecipes.forEach(r => {
+        const card = document.createElement('article');
+        card.className = 'card';
+        card.innerHTML = `
+          <div class="thumb" style="background-image:url('${r.image}')"></div>
+          <div class="row"><h2>${r.title}</h2></div>
+          <div class="pill cat">${r.category}</div>
+          <p class="muted">Ingredients: ${r.ingredients.join(', ')}</p>
+        `;
+        favGridSection.prepend(card);
+      });
+    });
+
+
+
+
+    // ---- Pantry Management ----
+    const pantryList = document.getElementById('pantryList');
+    const addPantryBtn = document.getElementById('addPantryBtn');
+    let editIndex = null; // null when adding, index when editing
+
+    function renderPantry() {
+      const pantry = JSON.parse(localStorage.getItem('pantry') || '[]');
+      pantryList.innerHTML = '';
+      if (!pantry.length) {
+        pantryList.innerHTML = '<p class="muted">Your pantry is empty.</p>';
+        return;
+      }
+
+      pantry.forEach((item, idx) => {
+        const card = document.createElement('article');
+        card.className = 'card';
+        card.innerHTML = `
+          <div class="row">
+            <h3>${item.name}</h3>
+            <button class="btn small outline" data-edit="${idx}">Edit</button>
+            <button class="btn small outline" data-del="${idx}">Remove</button>
+          </div>
+          <p>Quantity: ${item.quantity}</p>
+          <p>Expiry: ${item.expiry || 'N/A'}</p>
+        `;
+
+        // Remove button
+        card.querySelector('[data-del]').onclick = () => {
+          pantry.splice(idx, 1);
+          localStorage.setItem('pantry', JSON.stringify(pantry));
+          renderPantry();
+          editIndex = null;
+          resetPantryForm();
+        };
+
+        // Edit button
+        card.querySelector('[data-edit]').onclick = () => {
+          document.getElementById('pantryName').value = item.name;
+          document.getElementById('pantryQty').value = item.quantity;
+          document.getElementById('pantryExpiry').value = item.expiry;
+          editIndex = idx;
+          addPantryBtn.textContent = 'Save Changes';
+        };
+
+        pantryList.appendChild(card);
+      });
+    }
+
+    addPantryBtn.addEventListener('click', () => {
+      const name = document.getElementById('pantryName').value.trim();
+      const quantity = document.getElementById('pantryQty').value.trim();
+      const expiry = document.getElementById('pantryExpiry').value;
+
+      if (!name || !quantity) {
+        alert('Please enter ingredient name and quantity.');
+        return;
+      }
+
+      const pantry = JSON.parse(localStorage.getItem('pantry') || '[]');
+
+      if (editIndex !== null) {
+        // Save changes
+        pantry[editIndex] = { name, quantity, expiry };
+        editIndex = null;
+        addPantryBtn.textContent = 'Add Ingredient';
+      } else {
+        // Add new
+        pantry.push({ name, quantity, expiry });
+      }
+
+      localStorage.setItem('pantry', JSON.stringify(pantry));
+      renderPantry();
+      resetPantryForm();
+    });
+
+    function resetPantryForm() {
+      document.getElementById('pantryName').value = '';
+      document.getElementById('pantryQty').value = '';
+      document.getElementById('pantryExpiry').value = '';
+    }
+
+    // Initialize pantry when tab is active
+    function initPantry() {
+      renderPantry();
+    }
+
+    // Add to showRoute
+    if (hash === 'pantry') initPantry();
+
+
+    
+    
+
+
   </script>
 
   <noscript>Enable JavaScript to view the app.</noscript>

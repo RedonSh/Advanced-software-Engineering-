@@ -15,6 +15,7 @@
         <a href="recipes.html#generator">Generator</a>
         <a href="recipes.html#favourites">Favourites</a>
         <a href="recipes.html#nutrition">Nutrition</a>
+        <a href="recipes.html#pantry">Pantry</a> <!-- Added Pantry tab -->
       </nav>
     </div>
   </header>
@@ -38,11 +39,19 @@
   </main>
 
   <script>
+    // Mock login handler
     document.getElementById('loginForm').addEventListener('submit', (e) => {
       e.preventDefault();
       const name = document.getElementById('username').value.trim();
-      if (!name) { alert('Username required'); return; }
+      if (!name) {
+        alert('Username required');
+        return;
+      }
+
+      // Save user in localStorage
       RecipeSite.setUser({ name });
+
+      // Redirect to next page or default to favourites
       const params = new URLSearchParams(location.search);
       const next = params.get('next');
       location.href = next || 'recipes.html#favourites';
