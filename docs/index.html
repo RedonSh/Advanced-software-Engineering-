@@ -3,37 +3,43 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>RecipeSite — Login</title>
+  <title>RecipeSite — Sign in</title>
+  <link rel="stylesheet" href="css/base.css" />
   <link rel="stylesheet" href="css/login.css" />
   <script defer src="js/common.js"></script>
 </head>
-<body>
-  <header>
-    <div class="container">
-      <nav>
-        <a href="recipes.html#browse">Browse</a>
-        <a href="recipes.html#generator">Generator</a>
-        <a href="recipes.html#favourites">Favourites</a>
-        <a href="recipes.html#nutrition">Nutrition</a>
-      </nav>
-    </div>
-  </header>
+<body class="auth-body">
+  <main class="auth-wrap">
+    <div class="auth-card" role="form" aria-labelledby="loginTitle">
+      <div class="auth-brand">
+        <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 3a1 1 0 0 0-1 1v2h10a1 1 0 1 1 0 2H7v2h8.5a3.5 3.5 0 1 1 0 7H12v2h4.5a5.5 5.5 0 0 0 0-11H6V4a1 1 0 0 1 1-1h1z"/></svg>
+        <span>RecipeSite</span>
+      </div>
 
-  <main class="container">
-    <div class="card">
-      <h1>Login</h1>
-      <p class="muted">Mock client-side login. Replace with real auth later.</p>
-      <form id="loginForm" class="grid two">
+      <h1 id="loginTitle">Sign in</h1>
+      <p class="muted">Use any username to preview. Password is not checked.</p>
+
+      <form id="loginForm" class="auth-form" novalidate>
         <label class="field">
           <span>Username</span>
-          <input id="username" required placeholder="e.g. redon" />
+          <input id="username" autocomplete="username" required placeholder="e.g. redon" />
         </label>
         <label class="field">
           <span>Password</span>
-          <input id="password" type="password" required placeholder="••••••" />
+          <input id="password" type="password" autocomplete="current-password" required placeholder="••••••" />
         </label>
-        <button class="btn" style="grid-column:1/-1">Login</button>
+        <div class="auth-row">
+          <label class="checkbox">
+            <input type="checkbox" id="remember" /> <span>Remember me</span>
+          </label>
+          <a href="#" class="link small" onclick="alert('Password reset coming later');return false;">Forgot password?</a>
+        </div>
+        <button class="btn full" type="submit">Sign in</button>
       </form>
+
+      <div class="auth-footer">
+        <a class="link" href="recipes.html#browse">← Back to Discover</a>
+      </div>
     </div>
   </main>
 
@@ -41,11 +47,10 @@
     document.getElementById('loginForm').addEventListener('submit', (e) => {
       e.preventDefault();
       const name = document.getElementById('username').value.trim();
-      if (!name) { alert('Username required'); return; }
+      if (!name) { alert('Please enter a username'); return; }
       RecipeSite.setUser({ name });
-      const params = new URLSearchParams(location.search);
-      const next = params.get('next');
-      location.href = next || 'recipes.html#favourites';
+      const next = new URLSearchParams(location.search).get('next') || 'recipes.html#browse';
+      location.href = next;
     });
   </script>
 </body>

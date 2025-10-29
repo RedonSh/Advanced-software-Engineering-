@@ -1,44 +1,41 @@
+// js/common.js — front-end data + utilities (no backend)
 (function(){
-  const STORAGE = {
-    user: 'rs_user',
-    favs: name => `rs_favs_${name}`
-  };
+  const STORAGE = { user:'rs_user', favs: name => `rs_favs_${name}` };
 
-  // --- Sample data (18 recipes) ---
   const RECIPES = [
     { id:'r1', title:'Lemon Herb Chicken', category:'Dinner',
       ingredients:['chicken breast','lemon','garlic','olive oil','thyme','salt','pepper'],
-      steps:['Marinate 20 min.','Sear 3–4 min/side.','Bake 180°C 10–12 min.','Rest & serve.'],
+      steps:['Marinate chicken 20 min.','Sear 3–4 min per side.','Bake 180°C 10–12 min.','Rest 3 min & serve.'],
       nutrition:{calories:320,protein:35,carbs:4,fat:18},
       image:'https://images.unsplash.com/photo-1604908176997-4310b86a8c8b?q=80&w=1200&auto=format&fit=crop'
     },
     { id:'r2', title:'Veggie Stir-fry Noodles', category:'Dinner',
       ingredients:['udon noodles','capsicum','broccoli','soy sauce','ginger','garlic','sesame oil'],
-      steps:['Boil noodles.','Stir-fry veg.','Add sauce & toss.'],
+      steps:['Boil noodles.','Stir-fry vegetables.','Add sauce & toss.'],
       nutrition:{calories:410,protein:14,carbs:62,fat:12},
       image:'https://images.unsplash.com/photo-1625944529047-a47a578ebfc6?q=80&w=1200&auto=format&fit=crop'
     },
     { id:'r3', title:'Overnight Oats', category:'Breakfast',
       ingredients:['rolled oats','milk','chia seeds','honey','berries'],
-      steps:['Mix in jar.','Chill overnight.','Top & serve.'],
+      steps:['Mix all in a jar.','Chill overnight.','Top & serve.'],
       nutrition:{calories:280,protein:10,carbs:44,fat:7},
       image:'https://images.unsplash.com/photo-1525351484163-7529414344d8?q=80&w=1200&auto=format&fit=crop'
     },
     { id:'r4', title:'Avocado Toast', category:'Breakfast',
       ingredients:['sourdough','avocado','lemon','salt','pepper','chilli flakes'],
-      steps:['Toast bread.','Mash & spread.','Season.'],
+      steps:['Toast bread.','Mash avocado & spread.','Season & enjoy.'],
       nutrition:{calories:260,protein:6,carbs:28,fat:14},
       image:'https://images.unsplash.com/photo-1541516160071-7f9fcf3d6b0f?q=80&w=1200&auto=format&fit=crop'
     },
     { id:'r5', title:'Greek Salad', category:'Lunch',
       ingredients:['tomato','cucumber','red onion','feta','olives','oregano','olive oil'],
-      steps:['Chop veg.','Toss with oil & oregano.','Top with feta & olives.'],
+      steps:['Chop vegetables.','Toss with oil & oregano.','Top with feta & olives.'],
       nutrition:{calories:220,protein:7,carbs:10,fat:17},
       image:'https://images.unsplash.com/photo-1568605114967-8130f3a36994?q=80&w=1200&auto=format&fit=crop'
     },
     { id:'r6', title:'Banana Pancakes', category:'Dessert',
       ingredients:['banana','egg','flour','milk','baking powder','maple syrup'],
-      steps:['Mash banana.','Whisk batter.','Cook 2–3 min/side.'],
+      steps:['Mash banana.','Whisk batter.','Cook 2–3 min per side.'],
       nutrition:{calories:300,protein:8,carbs:52,fat:6},
       image:'https://images.unsplash.com/photo-1495216875107-c6c043eb703f?q=80&w=1200&auto=format&fit=crop'
     },
@@ -62,7 +59,7 @@
     },
     { id:'r10', title:'Baked Salmon with Dill', category:'Dinner',
       ingredients:['salmon fillet','lemon','dill','olive oil','salt','pepper'],
-      steps:['Season salmon.','Bake 200°C for 10–12 min.','Squeeze lemon & sprinkle dill.'],
+      steps:['Season salmon.','Bake 200°C 10–12 min.','Finish with lemon & dill.'],
       nutrition:{calories:360,protein:30,carbs:0,fat:26},
       image:'https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=1200&auto=format&fit=crop'
     },
@@ -104,7 +101,7 @@
     },
     { id:'r17', title:'Hummus & Veggie Plate', category:'Snack',
       ingredients:['hummus','carrot','cucumber','capsicum','pita (optional)'],
-      steps:['Slice veg.','Serve with hummus (and warm pita).'],
+      steps:['Slice veg.','Serve with hummus.'],
       nutrition:{calories:220,protein:7,carbs:20,fat:12},
       image:'https://images.unsplash.com/photo-1546549039-49e0b361c08a?q=80&w=1200&auto=format&fit=crop'
     },
@@ -115,51 +112,34 @@
       image:'https://images.unsplash.com/photo-1551183053-bf91a1b81141?q=80&w=1200&auto=format&fit=crop'
     }
   ];
-
   const CATEGORIES = ['All','Breakfast','Lunch','Dinner','Dessert','Snack','Vegan','Vegetarian','Gluten-Free'];
 
-  // --- Auth (mock) ---
-  function getUser(){
-    try { return JSON.parse(localStorage.getItem(STORAGE.user)); }
-    catch { return null; }
-  }
+  // Auth
+  function getUser(){ try{ return JSON.parse(localStorage.getItem(STORAGE.user)); }catch{ return null; } }
   function setUser(u){ localStorage.setItem(STORAGE.user, JSON.stringify(u)); }
   function logout(){ localStorage.removeItem(STORAGE.user); }
   function requireLogin(){
-    if (!getUser()){
-      location.href = 'login.html?next=' + encodeURIComponent('recipes.html' + (location.hash || '#favourites'));
-    }
+    if (!getUser()){ location.href = 'index.html?next='+encodeURIComponent('recipes.html'+(location.hash||'#browse')); }
   }
 
-  // --- Favourites ---
+  // Favourites
   function getFavSet(){
-    const u = getUser();
-    if (!u) return new Set();
-    const raw = localStorage.getItem(STORAGE.favs(u.name)) || '[]';
-    try { return new Set(JSON.parse(raw)); }
-    catch { return new Set(); }
+    const u=getUser(); if(!u) return new Set();
+    const raw=localStorage.getItem(STORAGE.favs(u.name))||'[]';
+    try { return new Set(JSON.parse(raw)); } catch { return new Set(); }
   }
   function toggleFav(id){
-    const u = getUser();
-    if (!u){ alert('Login first to save favourites.'); return; }
-    const key = STORAGE.favs(u.name);
-    const set = getFavSet();
-    set.has(id) ? set.delete(id) : set.add(id);
+    const u=getUser(); if(!u){ alert('Login first to save favourites.'); return; }
+    const key=STORAGE.favs(u.name); const set=getFavSet();
+    set.has(id)?set.delete(id):set.add(id);
     localStorage.setItem(key, JSON.stringify([...set]));
   }
 
-  // --- Recipe APIs ---
+  // Recipe APIs
   function listRecipes(){ return RECIPES; }
   function getRecipeById(id){ return RECIPES.find(r=>r.id===id); }
   function listCategories(){ return CATEGORIES; }
 
-  // Expose
-  window.RecipeSite = {
-    getUser, setUser, logout, requireLogin,
-    getFavSet, toggleFav,
-    listRecipes, getRecipeById, listCategories
-  };
+  // expose
+  window.RecipeSite = { getUser,setUser,logout,requireLogin, getFavSet,toggleFav, listRecipes,getRecipeById,listCategories };
 })();
-
-// Sanity log
-console.log('RecipeSite loaded:', !!window.RecipeSite, 'recipes:', (window.RecipeSite?.listRecipes()?.length||0));

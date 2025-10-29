@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RecipeSite — Recipe</title>
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/recipe.css" />
+  <script defer src="js/common.js"></script>
+  <style>.cook-modal[hidden]{display:none!important}</style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-row">
+      <a href="recipes.html#browse" class="brand">
+        <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 3a1 1 0 0 0-1 1v2h10a1 1 0 1 1 0 2H7v2h8.5a3.5 3.5 0 1 1 0 7H12v2h4.5a5.5 5.5 0 0 0 0-11H6V4a1 1 0 0 1 1-1h1z"/></svg>
+        <span>RecipeSite</span>
+      </a>
+      <nav class="crumbs">
+        <a href="recipes.html#browse">Discover</a>
+        <span>›</span>
+        <a id="crumbCat" href="recipes.html#browse"></a>
+        <span>›</span>
+        <span id="crumbTitle">Recipe</span>
+      </nav>
+      <div class="header-actions">
+        <a class="btn outline small" href="recipes.html#browse">Back</a>
+        <span class="pill" id="userBadge" hidden></span>
+        <a class="btn small" id="loginLink" href="index.html?next=recipe-detail.html">Login</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <article id="recipe" class="recipe">
+      <div class="hero">
+        <img class="thumb" id="heroImage" alt="" />
+        <div class="meta">
+          <div class="row">
+            <h1 id="title">Recipe</h1>
+            <button class="btn small" id="favBtn" type="button">☆ Save</button>
+            <button class="btn small outline" id="cookModeBtn" type="button" onclick="window.openCook?.()">Cook mode</button>
+          </div>
+          <div class="pill cat" id="category">Category</div>
+          <p class="muted" id="subline">Ingredients and steps below.</p>
+        </div>
+      </div>
+
+      <section class="grid two">
+        <div class="card">
+          <h2>Ingredients</h2>
+          <div class="row" style="margin:-6px 0 6px">
+            <button class="btn small outline" id="copyIng" type="button">Copy ingredients</button>
+          </div>
+          <ul id="ingredients" class="bullet"></ul>
+        </div>
+        <div class="card">
+          <h2>How to cook</h2>
+          <ol id="steps" class="num"></ol>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="row">
+          <a class="btn outline" href="recipes.html#browse">← Back to Discover</a>
+          <a class="btn" href="recipes.html#cook">Go to Cook</a>
+          <button class="btn outline" onclick="window.print()" type="button">Print</button>
+        </div>
+      </section>
+    </article>
+
+    <!-- Cook mode -->
+    <div id="cookModal" class="cook-modal" role="dialog" aria-modal="true" aria-labelledby="cookTitle" hidden style="display:none">
+      <div class="cook-sheet">
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <h2 id="cookTitle"></h2>
+          <button class="btn small outline" id="closeCook" type="button" onclick="window.closeCook?.()">Close</button>
+        </div>
+        <ol id="cookSteps" class="num" style="margin-top:8px"></ol>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const $ = (s,root=document)=>root.querySelector(s);
+
+    function updateUserUI(){
+      const badge=$('#userBadge'), link=$('#loginLink'), u=RecipeSite.getUser();
+      if (u){ badge.hidden=false; badge.textContent=`👤 ${u.name}`; link.textContent='Logout'; link.href='#';
+        link.onclick=(e)=>{ e.preventDefault(); RecipeSite.logout(); updateUserUI(); syncFavButton?.(); };
+      } else { badge.hidden=true; link.textContent='Login';
+        const p=new URLSearchParams(location.search); link.href='index.html?next='+encodeURIComponent('recipe-detail.html?'+p.toString()); link.onclick=null; }
+    }
+
+    const id=new URLSearchParams(location.search).get('id');
+    const r=RecipeSite.getRecipeById(id);
+
+    if (!r){
+      document.querySelector('main').innerHTML='<div class="card"><h1>Recipe not found</h1><p class="muted">That recipe does not exist.</p><a class="btn" href="recipes.html#browse">Back to Discover</a></div>';
+    } else {
+      $('#title').textContent=r.title;
+      $('#category').textContent=r.category;
+      const img=$('#heroImage'); img.src=r.image; img.alt=r.title;
+      $('#crumbTitle').textContent=r.title; const cc=$('#crumbCat'); cc.textContent=r.category; cc.href='recipes.html#browse';
+      $('#ingredients').innerHTML=r.ingredients.map(i=>`<li>${i}</li>`).join('');
+      $('#steps').innerHTML=r.steps.map(s=>`<li>${s}</li>`).join('');
+
+      $('#copyIng').addEventListener('click', ()=>{
+        navigator.clipboard.writeText(r.ingredients.join('\n'))
+          .then(()=>{ $('#copyIng').textContent='Copied ✓'; setTimeout(()=>$('#copyIng').textContent='Copy ingredients',1200); })
+          .catch(()=>alert('Copy failed'));
+      });
+
+      const favBtn=$('#favBtn');
+      function syncFavButton(){
+        const on=RecipeSite.getFavSet().has(r.id);
+        favBtn.textContent=on?'★ Saved':'☆ Save';
+        favBtn.classList.toggle('saved', on);
+        favBtn.setAttribute('aria-pressed', on);
+      }
+      favBtn.addEventListener('click',()=>{ RecipeSite.toggleFav(r.id); syncFavButton(); });
+      syncFavButton();
+
+      const modal=$('#cookModal'), cookTitle=$('#cookTitle'), cookSteps=$('#cookSteps');
+      let lastFocused=null;
+      function parseTimer(text){ const m=text.match(/(\d+)(?:\s*[-–]\s*(\d+))?\s*min/i); if(!m) return null; const a=parseInt(m[1],10), b=m[2]?parseInt(m[2],10):a; return Math.round((a+b)/2)*60; }
+      const fmt=s=>`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+
+      window.openCook=function(){
+        lastFocused=document.activeElement;
+        cookTitle.textContent=r.title; cookSteps.innerHTML='';
+        r.steps.forEach((text,i)=>{
+          const li=document.createElement('li'); li.className='cook-step';
+          li.innerHTML=`<input type="checkbox" aria-label="done step ${i+1}"><span>${text}</span>`;
+          const secs=parseTimer(text);
+          if(secs){
+            const wrap=document.createElement('span'); wrap.className='timer';
+            wrap.innerHTML=`<span data-t="${secs}">${fmt(secs)}</span><button class="btn small outline" type="button">Start</button>`;
+            const btn=wrap.querySelector('button'), label=wrap.querySelector('[data-t]'); let t=null, left=secs;
+            btn.addEventListener('click',()=>{
+              if(t){ clearInterval(t); t=null; left=secs; label.textContent=fmt(left); btn.textContent='Start'; return; }
+              btn.textContent='Stop'; t=setInterval(()=>{ left--; label.textContent=fmt(Math.max(left,0)); if(left<=0){ clearInterval(t); t=null; btn.textContent='Start'; } },1000);
+            });
+            li.appendChild(wrap);
+          }
+          cookSteps.appendChild(li);
+        });
+        modal.style.display='grid'; modal.removeAttribute('hidden');
+        $('#closeCook').focus();
+      };
+      window.closeCook=function(){
+        modal.setAttribute('hidden',''); modal.style.display='none';
+        if (lastFocused) lastFocused.focus();
+      };
+      modal.addEventListener('click', e=>{ if(e.target===modal) window.closeCook(); });
+      document.addEventListener('keydown', e=>{ if(e.key==='Escape' && !modal.hasAttribute('hidden')) window.closeCook(); });
+
+      // JSON-LD
+      (function ld(){
+        const tag=document.createElement('script'); tag.type='application/ld+json';
+        tag.textContent=JSON.stringify({
+          "@context":"https://schema.org","@type":"Recipe","name":r.title,"recipeCategory":r.category,"image":r.image,
+          "recipeIngredient":r.ingredients,"recipeInstructions":r.steps.map(s=>({"@type":"HowToStep","text":s}))
+        }); document.body.appendChild(tag);
+      })();
+    }
+
+    updateUserUI();
+  </script>
+</body>
+</html>

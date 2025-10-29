@@ -1,0 +1,14 @@
+.container{max-width:980px}
+.recipe .hero{display:grid;grid-template-columns:320px 1fr;gap:20px;margin-bottom:16px}
+.thumb{height:260px;width:100%;object-fit:cover;border-radius:14px;border:1px solid var(--border);background:color-mix(in srgb, var(--surface) 70%, var(--bg) 30%)}
+@media (max-width:900px){ .recipe .hero{grid-template-columns:1fr} .thumb{height:220px} }
+.bullet{padding-left:18px} .bullet li{margin:6px 0}
+.num{padding-left:20px} .num li{margin:6px 0}
+
+.cook-modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:grid;place-items:center;z-index:50}
+.cook-modal[hidden]{display:none!important}
+.cook-sheet{width:min(800px,92vw);max-height:84vh;overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:0 6px 20px rgba(0,0,0,.12);padding:16px}
+.cook-step{display:flex;gap:10px;align-items:baseline}
+.cook-step input{margin-top:4px}
+.timer{margin-left:auto;font-weight:600}
+.timer button{margin-left:8px}

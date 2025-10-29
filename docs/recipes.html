@@ -3,46 +3,82 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>RecipeSite — Recipes</title>
+  <title>RecipeSite — Discover & Cook</title>
+  <link rel="stylesheet" href="css/base.css" />
   <link rel="stylesheet" href="css/recipes.css" />
   <script defer src="js/common.js"></script>
 </head>
 <body>
-  <header>
-    <div class="container">
-      <div class="nav">
-        <nav>
-          <a href="#browse" id="tab-browse">Browse</a>
-          <a href="#generator" id="tab-generator">Generator</a>
-          <a href="#favourites" id="tab-favourites">Favourites</a>
-          <a href="#nutrition" id="tab-nutrition">Nutrition</a>
-        </nav>
-        <div class="auth">
-          <span class="pill" id="userBadge" hidden></span>
-          <a class="btn" id="loginLink" href="login.html?next=recipes.html#browse">Login</a>
-        </div>
+  <header class="site-header">
+    <div class="container header-row">
+      <a class="brand" href="recipes.html#browse" aria-label="RecipeSite Home">
+        <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="currentColor" d="M8 3a1 1 0 0 0-1 1v2h10a1 1 0 1 1 0 2H7v2h8.5a3.5 3.5 0 1 1 0 7H12v2h4.5a5.5 5.5 0 0 0 0-11H6V4a1 1 0 0 1 1-1h1z"/>
+        </svg>
+        <span>RecipeSite</span>
+      </a>
+
+      <nav class="main-nav" aria-label="Primary">
+        <a href="#browse" class="active">Discover</a>
+        <!-- Collections removed -->
+        <a href="#cook">Cook</a>
+      </nav>
+
+      <div class="header-actions">
+        <button id="themeToggle" class="pill" title="Toggle theme" aria-pressed="false">🌙</button>
+        <form class="search" role="search" onsubmit="return false">
+          <input id="globalSearch" placeholder="Search recipes…" />
+          <button id="globalSearchBtn" title="Search">🔍</button>
+        </form>
+        <span class="pill" id="userBadge" hidden></span>
+        <a class="btn small" id="loginLink" href="index.html?next=recipes.html#browse">Login</a>
+        <button class="menu-toggle" aria-label="Menu">☰</button>
       </div>
     </div>
   </header>
 
   <main class="container" id="app">
-    <!-- BROWSE -->
+    <!-- Discover -->
     <section class="route" data-route="browse">
-      <div class="card grid two">
+      <div class="card grid three-wide">
         <label class="field"><span>Search</span>
           <input id="q" placeholder="Search by title or ingredient" />
         </label>
         <label class="field"><span>Category</span>
           <select id="cat"></select>
         </label>
+        <label class="field"><span>Sort</span>
+          <select id="sort">
+            <option value="pop">Popularity</option>
+            <option value="title">Title A–Z</option>
+            <option value="cal_asc">Calories (low → high)</option>
+            <option value="cal_desc">Calories (high → low)</option>
+          </select>
+        </label>
       </div>
-      <div class="grid three" id="browseGrid"></div>
+
+      <div class="row" id="quickFilters" style="margin:8px 0 4px">
+        <button class="pill filter" data-f="all">All</button>
+        <button class="pill filter" data-f="vegan">Vegan</button>
+        <button class="pill filter" data-f="lowcal">≤400 kcal</button>
+        <button class="pill filter" data-f="dinner">Dinner</button>
+        <button class="pill filter" data-f="breakfast">Breakfast</button>
+      </div>
+
+      <p id="resultMeta" class="muted" style="margin:6px 0 10px"></p>
+
+      <div class="grid three" id="browseGrid" aria-live="polite"></div>
+      <div class="row pager" id="pager" hidden>
+        <button class="btn small outline" id="prevPage" disabled>Prev</button>
+        <span id="pageInfo" class="muted"></span>
+        <button class="btn small outline" id="nextPage">Next</button>
+      </div>
     </section>
 
-    <!-- GENERATOR -->
-    <section class="route" data-route="generator" hidden>
+    <!-- Cook (Generator only) -->
+    <section class="route" data-route="cook" hidden>
       <div class="card">
-        <h1>Recipe Generator</h1>
+        <h1>Cook</h1>
         <div class="grid two">
           <label class="field"><span>Category</span>
             <select id="genCategory"></select>
@@ -58,196 +94,266 @@
       </div>
       <div class="card" id="generated"></div>
     </section>
-
-    <!-- FAVOURITES -->
-    <section class="route" data-route="favourites" hidden>
-      <div class="card">
-        <h1>Your Favourites</h1>
-        <p class="muted">Saved per user.</p>
-        <div class="row">
-          <button class="btn" id="logoutBtn">Logout</button>
-        </div>
-      </div>
-      <div class="grid three" id="favGrid"></div>
-    </section>
-
-    <!-- NUTRITION -->
-    <section class="route" data-route="nutrition" hidden>
-      <div class="card">
-        <h1>Recipe Nutrition</h1>
-        <label class="field"><span>Recipe</span>
-          <select id="nutriSelect"></select>
-        </label>
-        <label class="field"><span>Servings</span>
-          <input id="servings" type="number" min="1" value="1" />
-        </label>
-      </div>
-      <div class="card" id="nutritionPanel"></div>
-    </section>
   </main>
 
   <script>
-    // ---- Tabs / routing
-    const routes = Array.from(document.querySelectorAll('.route'));
-    function showRoute() {
-      const hash = (location.hash || '#browse').replace('#','');
+    // --- Theme toggle ---
+    (function theme(){
+      const btn = document.getElementById('themeToggle');
+      const saved = localStorage.getItem('theme');
+      if (saved) document.documentElement.dataset.theme = saved;
+      const setIcon = () => {
+        const dark = document.documentElement.dataset.theme==='dark';
+        btn.textContent = dark ? '☀️' : '🌙';
+        btn.setAttribute('aria-pressed', String(dark));
+      };
+      setIcon();
+      btn.addEventListener('click', ()=>{
+        const next = (document.documentElement.dataset.theme==='dark') ? 'light' : 'dark';
+        document.documentElement.dataset.theme = next;
+        localStorage.setItem('theme', next);
+        setIcon();
+      });
+    })();
+
+    // --- Router ---
+    const routes = [...document.querySelectorAll('.route')];
+    function showRoute(){
+      const hash = (location.hash || '#browse').slice(1);
       routes.forEach(s => s.hidden = s.dataset.route !== hash);
-      document.querySelectorAll('nav a').forEach(a => {
+      document.querySelectorAll('.main-nav a').forEach(a => {
         a.classList.toggle('active', a.getAttribute('href') === '#'+hash);
       });
-      if (hash === 'browse') renderBrowse();
-      if (hash === 'generator') initGenerator();
-      if (hash === 'favourites') renderFavourites();
-      if (hash === 'nutrition') initNutrition();
+      if (hash==='browse') renderBrowse(true);
+      if (hash==='cook') initGenerator();
     }
-    window.addEventListener('hashchange', showRoute);
+    addEventListener('hashchange', showRoute);
 
-    // ---- Auth badge & login link
+    // --- Auth UI ---
     function updateUserUI(){
       const badge = document.getElementById('userBadge');
-      const link = document.getElementById('loginLink');
+      const link  = document.getElementById('loginLink');
       const u = RecipeSite.getUser();
-      if (u) {
+      if (u){
         badge.hidden = false; badge.textContent = `👤 ${u.name}`;
-        link.textContent = 'Logout'; link.href = '#';
-        link.onclick = (e)=>{ e.preventDefault(); RecipeSite.logout(); updateUserUI(); renderFavourites(); };
+        link.textContent='Logout'; link.href='#';
+        link.onclick=(e)=>{ e.preventDefault(); RecipeSite.logout(); updateUserUI(); renderBrowse(); };
       } else {
         badge.hidden = true;
-        link.textContent = 'Login';
-        link.href = 'login.html?next=recipes.html' + (location.hash || '#browse');
-        link.onclick = null;
+        link.textContent='Login';
+        link.href = 'index.html?next=' + encodeURIComponent('recipes.html'+(location.hash||'#browse'));
+        link.onclick=null;
       }
     }
 
-    // ---- Browse
+    // --- Discover (search, sort, pagination) ---
     const q = document.getElementById('q');
     const cat = document.getElementById('cat');
+    const sortSel = document.getElementById('sort');
     const browseGrid = document.getElementById('browseGrid');
+    const meta = document.getElementById('resultMeta');
+
+    const pager = document.getElementById('pager');
+    const prevBtn = document.getElementById('prevPage');
+    const nextBtn = document.getElementById('nextPage');
+    const pageInfo = document.getElementById('pageInfo');
+    let page = 1, pageSize = 9, lastResults = [];
+
+    function debounce(fn, ms=250){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms);} }
+
     function initBrowse(){
-      if (!cat.options.length) {
-        RecipeSite.listCategories().forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; cat.appendChild(o); });
-        cat.value='All';
-        q.addEventListener('input', renderBrowse);
-        cat.addEventListener('change', renderBrowse);
-      }
+      if (cat.options.length) return;
+      RecipeSite.listCategories().forEach(c=>{
+        const o = document.createElement('option'); o.value=c; o.textContent=c; cat.appendChild(o);
+      });
+      const fav = document.createElement('option');
+      fav.value='Favourites'; fav.textContent='Favourites ★'; cat.appendChild(fav);
+
+      cat.value='All'; sortSel.value='pop';
+      window.__quickFilter='all';
+      q.addEventListener('input', debounce(()=>renderBrowse(), 250));
+      cat.addEventListener('change', ()=>{ page=1; renderBrowse(); });
+      sortSel.addEventListener('change', ()=>{ page=1; renderBrowse(); });
+
+      document.querySelectorAll('#quickFilters .filter').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const m = btn.dataset.f;
+          if (m==='dinner' || m==='breakfast') cat.value = (m==='dinner')?'Dinner':'Breakfast';
+          else cat.value = 'All';
+          window.__quickFilter = m;
+          page=1; renderBrowse();
+        });
+      });
+
+      prevBtn.onclick = ()=>{ if(page>1){ page--; renderBrowse(false); } };
+      nextBtn.onclick = ()=>{
+        const max = Math.max(1, Math.ceil(lastResults.length/pageSize));
+        if(page<max){ page++; renderBrowse(false); }
+      };
+
+      document.addEventListener('keydown', e=>{ if(e.key==='/' && document.activeElement.tagName!=='INPUT'){ e.preventDefault(); q.focus(); } });
     }
-    function renderBrowse(){
+
+    function sortResults(arr){
+      const v = sortSel.value;
+      if (v==='title') return arr.slice().sort((a,b)=>a.title.localeCompare(b.title));
+      if (v==='cal_asc') return arr.slice().sort((a,b)=>a.nutrition.calories-b.nutrition.calories);
+      if (v==='cal_desc') return arr.slice().sort((a,b)=>b.nutrition.calories-a.nutrition.calories);
+      return arr;
+    }
+
+    function renderBrowse(reset=false){
       initBrowse();
       const query = (q.value||'').toLowerCase().trim();
       const category = cat.value;
-      const res = RecipeSite.listRecipes().filter(r=>{
+      const favSet = RecipeSite.getFavSet();
+      const mode = window.__quickFilter || 'all';
+
+      const filtered = RecipeSite.listRecipes().filter(r=>{
         const mq = !query || r.title.toLowerCase().includes(query) || r.ingredients.some(i=>i.toLowerCase().includes(query));
-        const mc = category==='All' || r.category===category;
-        return mq && mc;
+        const mc = (category==='All') || (category==='Favourites' && favSet.has(r.id)) || (category!=='Favourites' && r.category===category);
+        const mf = (mode==='all') ? true
+                : (mode==='vegan') ? (r.category==='Vegan')
+                : (mode==='lowcal') ? (r.nutrition.calories<=400)
+                : (mode==='dinner') ? (r.category==='Dinner')
+                : (mode==='breakfast') ? (r.category==='Breakfast')
+                : true;
+        return mq && mc && mf;
       });
-      browseGrid.innerHTML = '';
-      res.forEach(r => browseGrid.appendChild(cardNode(r)));
+
+      lastResults = sortResults(filtered);
+      if (reset) page = 1;
+
+      const total = lastResults.length;
+      meta.textContent = total ? `${total} result${total===1?'':'s'}` : 'No results — adjust your search or filters';
+
+      browseGrid.innerHTML='';
+      if (!total){
+        const el = document.createElement('div');
+        el.className='card';
+        el.innerHTML = `<h2>No results</h2><p class="muted">Your search/filters hide everything.</p>
+          <button class="btn outline" id="resetFiltersBtn">Reset filters</button>`;
+        browseGrid.appendChild(el);
+        el.querySelector('#resetFiltersBtn').onclick = ()=>{ q.value=''; cat.value='All'; sortSel.value='pop'; window.__quickFilter='all'; page=1; renderBrowse(); };
+        pager.hidden = true;
+        return;
+      }
+
+      const max = Math.max(1, Math.ceil(total/pageSize));
+      page = Math.min(page, max);
+      const slice = lastResults.slice((page-1)*pageSize, page*pageSize);
+      slice.forEach(r=> browseGrid.appendChild(cardNode(r)));
       syncFavButtons(browseGrid);
+
+      pager.hidden = max===1;
+      prevBtn.disabled = page<=1;
+      nextBtn.disabled = page>=max;
+      pageInfo.textContent = `Page ${page} of ${max}`;
     }
 
-    // ---- Generator
-    let genInit = false;
-    function initGenerator(){
-      if (genInit) return;
-      const catSel = document.getElementById('genCategory');
-      RecipeSite.listCategories().forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; catSel.appendChild(o); });
-      catSel.value = 'All';
-      const genInput = document.getElementById('genIngredient');
-      const out = document.getElementById('generated');
-      function pool(){
-        const cat = catSel.value; const key = (genInput.value||'').toLowerCase().trim();
-        return RecipeSite.listRecipes().filter(r =>
-          (cat==='All'||r.category===cat) &&
-          (!key || r.ingredients.some(i=>i.toLowerCase().includes(key)) || r.title.toLowerCase().includes(key))
-        );
-      }
-      function render(r){
-        if(!r){ out.innerHTML = '<p class="muted">No match. Try another filter.</p>'; return; }
-        out.innerHTML = ''; out.appendChild(cardNode(r)); syncFavButtons(out);
-      }
-      document.getElementById('generateBtn').onclick = ()=>{ const p=pool(); if(!p.length) return render(null); render(p[Math.floor(Math.random()*p.length)]); };
-      document.getElementById('surpriseBtn').onclick = ()=>{ const all=RecipeSite.listRecipes(); render(all[Math.floor(Math.random()*all.length)]); };
-      genInit = true;
-    }
-
-    // ---- Favourites
-    const favGrid = document.getElementById('favGrid');
-    function renderFavourites(){
-      const u = RecipeSite.getUser();
-      if (!u) { favGrid.innerHTML = '<p class="muted">Please log in first.</p>'; return; }
-      const set = RecipeSite.getFavSet();
-      const items = RecipeSite.listRecipes().filter(r => set.has(r.id));
-      favGrid.innerHTML = '';
-      if (!items.length){ favGrid.innerHTML = '<p class="muted">No favourites yet.</p>'; }
-      items.forEach(r => favGrid.appendChild(cardNode(r)));
-      syncFavButtons(favGrid);
-      document.getElementById('logoutBtn').onclick = ()=>{ RecipeSite.logout(); updateUserUI(); renderFavourites(); };
-    }
-
-    // ---- Nutrition
-    const nutriSelect = document.getElementById('nutriSelect');
-    const nutritionPanel = document.getElementById('nutritionPanel');
-    const servingsInput = document.getElementById('servings');
-    let nutriInit = false;
-    function initNutrition(){
-      if (!nutriInit) {
-        RecipeSite.listRecipes().forEach(r => {
-          const o=document.createElement('option'); o.value=r.id; o.textContent=r.title; nutriSelect.appendChild(o);
-        });
-        nutriSelect.addEventListener('change', updateNutrition);
-        servingsInput.addEventListener('input', updateNutrition);
-        nutriInit = true;
-      }
-      updateNutrition();
-    }
-    function updateNutrition(){
-      const r = RecipeSite.getRecipeById(nutriSelect.value) || RecipeSite.listRecipes()[0];
-      const s = Math.max(1, parseInt(servingsInput.value||'1', 10));
-      const n = r.nutrition; const tot = { calories:n.calories*s, protein:n.protein*s, carbs:n.carbs*s, fat:n.fat*s };
-      nutritionPanel.innerHTML = `
-        <h2>${r.title}</h2>
-        <p class="muted">Per serving and totals for <strong>${s}</strong> ${s===1?'serving':'servings'}.</p>
-        <div class="grid two" style="margin-top:10px">
-          <div class="card"><strong>Per Serving</strong><ul><li>Calories: ${n.calories}</li><li>Protein: ${n.protein} g</li><li>Carbs: ${n.carbs} g</li><li>Fat: ${n.fat} g</li></ul></div>
-          <div class="card"><strong>Total</strong><ul><li>Calories: ${tot.calories}</li><li>Protein: ${tot.protein} g</li><li>Carbs: ${tot.carbs} g</li><li>Fat: ${tot.fat} g</li></ul></div>
-        </div>`;
-    }
-
-    // ---- Card factory + fav sync
     function cardNode(r){
-      const wrap = document.createElement('article'); wrap.className = 'card';
-      wrap.innerHTML = `
-        <div class="thumb" style="background-image:url('${r.image}')"></div>
+      const to = `recipe-detail.html?id=${encodeURIComponent(r.id)}`;
+      const wrap = document.createElement('article');
+      wrap.className='card link-card';
+      wrap.innerHTML=`
+        <a class="thumb-link" href="${to}">
+          <img class="thumb" src="${r.image}" alt="${r.title}" loading="lazy" />
+        </a>
         <div class="row">
-          <h2>${r.title}</h2>
-          <button class="btn small" data-fav="${r.id}">☆ Save</button>
+          <h2 class="card-title"><a class="title-link" href="${to}">${r.title}</a></h2>
+          <button class="btn small" data-fav="${r.id}" type="button" aria-pressed="false">☆ Save</button>
         </div>
         <div class="pill cat">${r.category}</div>
         <p class="muted">Ingredients: ${r.ingredients.slice(0,4).join(', ')}...</p>
-        <div class="row">
-          <a class="btn small outline" href="#nutrition" data-nutri="${r.id}">Nutrition</a>
-        </div>`;
-      wrap.querySelector('[data-fav]').onclick = ()=>{ RecipeSite.toggleFav(r.id); syncFavButtons(wrap); };
-      wrap.querySelector('[data-nutri]').onclick = (e)=>{ e.preventDefault(); location.hash='nutrition';
-        setTimeout(()=>{ const pick=document.getElementById('nutriSelect'); if(pick){ pick.value=r.id; updateNutrition(); }}, 0);
-      };
+        <div class="row"><a class="btn small outline" href="${to}">View details</a></div>
+      `;
+      wrap.querySelector('[data-fav]').addEventListener('click',(e)=>{
+        e.stopPropagation(); RecipeSite.toggleFav(r.id); syncFavButtons(wrap);
+      });
+      wrap.addEventListener('click',(e)=>{
+        const isButton = e.target.closest('button,[data-fav]');
+        const isLink   = e.target.closest('a[href]');
+        if (!isButton && !isLink) location.href = to;
+      });
       return wrap;
     }
+
     function syncFavButtons(scope=document){
       const set = RecipeSite.getFavSet();
       scope.querySelectorAll('[data-fav]').forEach(btn=>{
         const on = set.has(btn.getAttribute('data-fav'));
         btn.textContent = on ? '★ Saved' : '☆ Save';
+        btn.setAttribute('aria-pressed', on);
         btn.classList.toggle('saved', on);
       });
     }
 
-    // Boot
-    if (!location.hash) location.hash = '#browse';
-    updateUserUI();
-    showRoute();
-  </script>
+    // --- Header search ---
+    (function headerSearch(){
+      const gs=document.getElementById('globalSearch'), gsBtn=document.getElementById('globalSearchBtn');
+      function runGS(){
+        const qv=(gs.value||'').trim(); location.hash='#browse';
+        setTimeout(()=>{ const i=document.getElementById('q'); if(i){ i.value=qv; i.dispatchEvent(new Event('input')); }},0);
+      }
+      gsBtn.addEventListener('click', runGS);
+      gs.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); runGS(); } });
+      const toggle=document.querySelector('.menu-toggle'), nav=document.querySelector('.main-nav');
+      toggle.addEventListener('click', ()=> nav.classList.toggle('open'));
+    })();
 
-  <noscript>Enable JavaScript to view the app.</noscript>
+    // --- COOK PAGE: generator logic (fixed) ---
+    let genInit=false;
+    function initGenerator(){
+      if (genInit) return;
+      const catSel = document.getElementById('genCategory');
+      const keyInp = document.getElementById('genIngredient');
+      const out    = document.getElementById('generated');
+      const genBtn = document.getElementById('generateBtn');
+      const surpriseBtn = document.getElementById('surpriseBtn');
+
+      // Populate categories (include All)
+      RecipeSite.listCategories().forEach(c=>{
+        const o=document.createElement('option'); o.value=c; o.textContent=c; catSel.appendChild(o);
+      });
+      catSel.value='All';
+
+      function pool(){
+        const cat=catSel.value;
+        const key=(keyInp.value||'').toLowerCase().trim();
+        return RecipeSite.listRecipes().filter(r=>{
+          const mc = (cat==='All') || r.category===cat;
+          const mk = !key || r.title.toLowerCase().includes(key) || r.ingredients.some(i=>i.toLowerCase().includes(key));
+          return mc && mk;
+        });
+      }
+
+      function render(r){
+        out.innerHTML='';
+        if(!r){
+          out.innerHTML='<p class="muted">No match. Try a different category or ingredient.</p>';
+          return;
+        }
+        out.appendChild(cardNode(r));
+        syncFavButtons(out);
+        // scroll to result on mobile
+        out.scrollIntoView({behavior:'smooth', block:'start'});
+      }
+
+      genBtn.addEventListener('click', ()=>{
+        const p = pool();
+        render(p.length ? p[Math.floor(Math.random()*p.length)] : null);
+      });
+      surpriseBtn.addEventListener('click', ()=>{
+        const all = RecipeSite.listRecipes();
+        render(all[Math.floor(Math.random()*all.length)]);
+      });
+
+      genInit=true;
+    }
+
+    // boot
+    if (!location.hash) location.hash='#browse';
+    updateUserUI(); showRoute();
+  </script>
 </body>
 </html>
