@@ -57,18 +57,37 @@
     </div>
   </main>
 
-  <script>
-    // Mock login handler
-    document.getElementById('loginForm').addEventListener('submit', (e) => {
+  <script type="module">
+    const form = document.getElementById('loginForm');
+    const email = document.getElementById('username'); // treat as email input
+    const pass  = document.getElementById('password');
+  
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const name = document.getElementById('username').value.trim();
-      if (!name) { alert('Username required'); return; }
-      RecipeSite.setUser({ name });
-      // Redirect to next or Favourites by default
+      const em = (email.value || '').trim();
+      const pw = (pass.value  || '').trim();
+      if (!em || !pw) {
+        alert('Email and password required');
+        return;
+      }
+  
+      // Try sign-in; if user doesn’t exist, sign-up automatically
+      let { error } = await supabase.auth.signInWithPassword({ email: em, password: pw });
+      if (error && /invalid/i.test(error.message)) {
+        ({ error } = await supabase.auth.signUp({ email: em, password: pw }));
+      }
+      if (error) {
+        alert(error.message);
+        return;
+      }
+  
+      // Keep the header badge behavior
+      const profileName = em.split('@')[0];
+      RecipeSite.setUser({ name: profileName });
+  
       const params = new URLSearchParams(location.search);
-      const next = params.get('next');
-      location.href = next || 'recipes.html#favourites';
+      location.href = params.get('next') || 'recipes.html#favourites';
     });
-  </script>
+  </script>  
 </body>
 </html>
