@@ -11,3 +11,4 @@ window.supabase = createClient(
   { auth: { persistSession: true, autoRefreshToken: true } }
 );
 
+
