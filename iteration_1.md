@@ -1,4 +1,4 @@
-# Actual iteration-1 board, (see chapters 3 and 4), add your start and end dates 
+# Actual iteration-1 board,  8/10/25 - 29/10/25
 
 # Checklist: 
 ## Github entry timestamps
