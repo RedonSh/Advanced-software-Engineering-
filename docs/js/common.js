@@ -8,6 +8,7 @@
       RecipeSite?.setUser?.({ name: username });
     }
   })();
+  
   const STORAGE = { user:'rs_user', favs: name => `rs_favs_${name}` };
 
   const RECIPES = [
