@@ -1,14 +1,16 @@
 // js/common.js — front-end data + utilities (no backend)
 (function(){
+
   // ✅ Stay signed in check — restore user session from Supabase
   (async () => {
     const { data, error } = await supabase.auth.getUser();
+    console.log('Supabase session check:', data, error); // 👈 add this
     if (data?.user) {
       const username = data.user.email.split('@')[0];
       RecipeSite?.setUser?.({ name: username });
     }
   })();
-  
+
   const STORAGE = { user:'rs_user', favs: name => `rs_favs_${name}` };
 
   const RECIPES = [
