@@ -47,7 +47,7 @@ In the second week, we divided tasks among team members, assigning specific area
 Total: 27 days
 
 
-## Iteration 1, 8/10/25 - 29/10/25
+# Iteration 1, 8/10/25 - 29/10/25
 
 #### Week 1 (8/10 – 13/10)
 
@@ -110,7 +110,7 @@ https://github.com/RedonSh/Advanced-software-Engineering-/blob/main/iteration_1.
 https://github.com/RedonSh/Advanced-software-Engineering-/blob/main/user_story_iteration_01.md
 
 
-### Iteration 2 [duration 3-4 weeks], add your start and end dates
+# Iteration 2 [duration 3-4 weeks], add your start and end dates
 Goal is to have 2 iterations during a trimester of teaching.
 1. [user story title](./user_stories/user_story_01_title.md), priority XX, YY days 
 2. ...
