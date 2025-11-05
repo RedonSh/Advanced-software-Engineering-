@@ -22,18 +22,14 @@ As a user, I can register and log in, so that my pantry, preferences, and saved 
 As a user, I can set my dietary restrictions and nutrition goals (e.g., vegan, halal, low-sodium), so that the app only suggests recipes that fit my needs.
 
 #### Pantry Management
-As a user, I can add, edit, or remove pantry items with quantity, unit, and expiry date, so that I know what ingredients I have at home.
-
-As a user, I can see suggestions for commonly used pantry items, so that adding items is faster.
-
-As a user, I want the app to highlight items that are expired or running low, so I avoid cooking failures and waste.
+- As a user, I can add, edit, or remove pantry items with quantity, unit, and expiry date, so that I know what ingredients I have at home.
+- As a user, I can see suggestions for commonly used pantry items, so that adding items is faster.
+- As a user, I want the app to highlight items that are expired or running low, so I avoid cooking failures and waste.
 
 #### Recipe Generation
-As a user, I can generate recipes based on my pantry items and dietary constraints, so that I can cook meals with what I have.
-
-As a user, I want recipes to indicate preparation time, servings, and steps, so that I can plan efficiently.
-
-As a user, I want allergens flagged and dietary compliance enforced, so that I can safely follow my restrictions.
+- As a user, I can generate recipes based on my pantry items and dietary constraints, so that I can cook meals with what I have.
+- As a user, I want recipes to indicate preparation time, servings, and steps, so that I can plan efficiently.
+- As a user, I want allergens flagged and dietary compliance enforced, so that I can safely follow my restrictions.
 
 ## In progress:
 
@@ -57,7 +53,10 @@ Date Completed: 29/10/25
 
 Core Navigation and Key Screens (Home, Search, Recipe Details) implemented with a clean, intuitive UI and smooth navigation flow.
 
-Features include user-generated recipes, pantry management, and a smart shopping list creator that helps users organize ingredients efficiently.
+Features include 
+- user-generated recipes,
+- pantry management,
+- and a smart shopping list creator that helps users organize ingredients efficiently.
 
 Developers: Redon Shkreli, Minh Duy Nguyen
 
@@ -71,17 +70,12 @@ Database and Cloud Integration Research — focused on implementing efficient ba
 Contributors:
 
 • Tshewang Tobden – Conducted research and implementation of database integration using Supabase.
-
 • Sanjay Sabu – Conducted research and implementation of cloud service integration, ensuring scalability and reliability.
 
 
 ### Burn Down for iteration-1:
-7/10/25 – 2 weeks left (14 days remaining)
-
-15/10/25 – 1 week left (7 days remaining)
-
-22/10/25 – 3 days left (final testing and integration)
-
-29/10/25 – 0 days left (iteration completed successfully)
-
-Actual Velocity: ~53 days of estimated work completed across 5 developers.
+- 7/10/25 – 2 weeks left (14 days remaining)
+- 15/10/25 – 1 week left (7 days remaining)
+- 22/10/25 – 3 days left (final testing and integration)
+- 29/10/25 – 0 days left (iteration completed successfully)
+- Actual Velocity: ~53 days of estimated work completed across 5 developers.
