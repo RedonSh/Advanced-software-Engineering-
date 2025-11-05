@@ -13,10 +13,10 @@
 # Project planning BEFORE iteration-1, (see chapters 1-3)
 Checklist/TODOs: 
 
-  # Week 1
+#### Week 1
  From the first week, after forming our team, we began searching for a stakeholder to develop a website. We found one and conducted an interview with him, during which he expressed interest in creating a recipe website. Based on the interview, we developed user stories that helped us identify key features such as a login page, pantry management system, shopping list, recipe suggestions based on available pantry items, an option to save favorite recipes, and features showing nutrition facts and personalized recommendations. 
 
- # Week 2
+#### Week 2
 In the second week, we divided tasks among team members, assigning specific areas for each person to focus on. After that, we came together for a blue-sky brainstorming session to generate creative ideas and define the main features of our project. At the end of the session, we conducted a planning poker activity to estimate how many days each interface would take to complete and used these estimates to calculate the project’s velocity, which we recorded and planned to upload to GitHub.
 
 **Blue-sky Brainstorming Ideas:**
@@ -49,7 +49,7 @@ Total: 27 days
 
 # Iteration 1, 8/10/25 - 29/10/25
 
-#### Week 1 (8/10 – 13/10)
+#### Week 3 (8/10 – 13/10)
 
 Iteration 1 officially started.
 
@@ -61,7 +61,7 @@ Front-end planning began — layout sketches for Home, Search, and Recipe Detail
 
 Back-end research initiated: explored Supabase and general cloud service requirements.
 
-#### Week 2 (14/10 – 20/10)
+#### Week 4 (14/10 – 20/10)
 
 Continued UI implementation of Core Navigation and Home/Search pages.
 
@@ -73,7 +73,7 @@ GitHub commits verified (see timestamps).
 
 Team meeting held to align design consistency and define the next sprint priorities.
 
-#### Week 3 (21/10 – 27/10)
+#### Week 5 (21/10 – 27/10)
 
 Completed and tested Recipe Details screen with clean UI and smooth transitions.
 
@@ -87,7 +87,7 @@ Back-end team finished Supabase and Cloud integration research and committed fin
 
 Task 3 (Back End) marked completed – 27/10/25.
 
-#### Week 4 (28/10 – 29/10)
+#### Week 6 (28/10 – 29/10)
 
 Performed integration testing across front-end components and Supabase.
 
