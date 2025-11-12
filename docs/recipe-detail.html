@@ -4,185 +4,90 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>RecipeSite — Recipe</title>
+
   <link rel="stylesheet" href="css/base.css" />
   <link rel="stylesheet" href="css/recipe.css" />
 
+  <!-- ENV -->
   <script>
-    window.ENV_SUPABASE_URL = 'https://YOUR-PROJECT.supabase.co';
-    window.ENV_SUPABASE_KEY = 'YOUR-ANON-PUBLIC-KEY';
+    window.ENV_SUPABASE_URL = 'https://bhqeasmtrdfqncliipki.supabase.co/';
+    window.ENV_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJocWVhc210cmRmcW5jbGlpcGtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIwNzQ4NzgsImV4cCI6MjA3NzY1MDg3OH0.249y8yGBYKgcvnoKkdTft94Mu74kbO_Ioso2HFrTFpg';
   </script>
-  <script defer src="supabaseClient.js"></script>
-  <script defer src="js/common.js"></script>
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"
+          onload="window.supabase = window.supabase.createClient(ENV_SUPABASE_URL, ENV_SUPABASE_KEY, {auth:{persistSession:true, autoRefreshToken:true}})"></script>
+
+  <!-- Core -->
+  <script src="js/common.js" defer></script>
 </head>
 <body>
-  <header class="site-header">
-    <div class="container header-row">
-      <a class="brand" href="recipes.html#browse">RecipeSite</a>
-      <nav class="main-nav" aria-label="Primary">
-        <a href="recipes.html#browse">Browse</a>
-        <a href="recipes.html#generator">Generator</a>
-        <a href="recipes.html#pantry">Pantry</a>
-        <a href="recipes.html#favourites">Favourites</a>
-      </nav>
+  <header class="site-head">
+    <div class="container">
+      <nav class="nav"><a href="recipes.html#browse">← Back to Browse</a></nav>
     </div>
   </header>
 
-  <main class="container" id="page">
-    <article class="recipe-hero card" id="hero" aria-live="polite"></article>
-
-    <section class="grid two">
-      <aside class="card" id="nutritionCard"></aside>
-      <section class="card" id="ingredientsCard"></section>
-    </section>
-
-    <section class="card" id="stepsCard"></section>
+  <main class="container">
+    <div id="alert" class="alert" hidden style="margin:12px 0;padding:10px 12px;border:1px solid #e11;border-radius:10px;background:#fee;color:#700"></div>
+    <article id="detail" class="recipe-detail">Loading…</article>
   </main>
 
   <script>
-    async function getRecipeSafe(id) {
-      try {
-        const maybe = RecipeSite?.getRecipeById ? RecipeSite.getRecipeById(id) : null;
-        const r = (maybe && typeof maybe.then === 'function') ? await maybe : maybe;
-        if (r) return r;
-      } catch (e) { console.warn('getRecipeById failed', e); }
-      try {
-        const listMaybe = RecipeSite?.listRecipes ? RecipeSite.listRecipes() : [];
-        const list = (listMaybe && typeof listMaybe.then === 'function') ? await listMaybe : listMaybe;
-        if (Array.isArray(list) && list.length) {
-          const dec = decodeURIComponent(id || '');
-          return list.find(x => String(x.id) === String(id))
-              || list.find(x => x.id == id)
-              || list.find(x => String(x.id) === dec);
-        }
-      } catch (e) { console.warn('listRecipes failed', e); }
-      return null;
-    }
+  document.addEventListener('DOMContentLoaded', async () => {
+    const alertBox = document.getElementById('alert');
+    const showAlert = (m)=>{ alertBox.textContent=m; alertBox.hidden=false; };
+    const el = document.getElementById('detail');
 
-    function renderNotFound() {
-      document.getElementById('page').innerHTML =
-        '<div class="card"><h1>Recipe not found</h1><p class="muted">Return to <a href="recipes.html#browse">Browse</a>.</p></div>';
-    }
-
-    function renderRecipe(r) {
-      // HERO
-      const hero = document.getElementById('hero');
-      hero.innerHTML = `
-        <div class="hero-media">
-          <img src="${r.image}" alt="${r.title}" loading="eager" />
-        </div>
-        <div class="hero-meta">
-          <h1>${r.title}</h1>
-          <div class="pill cat">${r.category || ''}</div>
-          <div class="row">
-            <button class="btn small" id="favBtn" data-fav="${r.id}" aria-pressed="false">☆ Save</button>
-            <a class="btn small outline" href="recipes.html#browse">← Back</a>
-          </div>
-        </div>
-      `;
-
-      // NUTRITION
-      const n = r.nutrition || { calories: 0, protein: 0, carbs: 0, fat: 0 };
-      document.getElementById('nutritionCard').innerHTML = `
-        <h2>Nutrition</h2>
-        <div class="grid two">
-          <div class="nutri-card"><strong>Calories</strong><div>${n.calories ?? 0} kcal</div></div>
-          <div class="nutri-card"><strong>Protein</strong><div>${n.protein ?? 0} g</div></div>
-          <div class="nutri-card"><strong>Carbs</strong><div>${n.carbs ?? 0} g</div></div>
-          <div class="nutri-card"><strong>Fat</strong><div>${n.fat ?? 0} g</div></div>
-        </div>
-      `;
-
-      // INGREDIENTS
-      const ing = Array.isArray(r.ingredients) ? r.ingredients : [];
-      document.getElementById('ingredientsCard').innerHTML = `
-        <h2>Ingredients</h2>
-        <ul class="ingredients">
-          ${ing.map(i => `<li>${i}</li>`).join('')}
-        </ul>
-        <div class="row">
-          <button class="btn small outline" id="copyIng">Copy ingredients</button>
-        </div>
-      `;
-
-      // STEPS + COOK MODE
-      const steps = Array.isArray(r.steps) && r.steps.length ? r.steps : ['No steps provided'];
-      document.getElementById('stepsCard').innerHTML = `
-        <div class="row" style="justify-content:space-between;align-items:center">
-          <h2>Steps</h2>
-          <button class="btn small" id="cookModeBtn">Enter Cook Mode</button>
-        </div>
-        <ol class="steps">
-          ${steps.map((s, i) => `
-            <li>
-              <label class="checkbox">
-                <input type="checkbox" data-step="${i}" />
-                <span>${s}</span>
-              </label>
-            </li>`).join('')}
-        </ol>
-        <dialog id="cookDialog">
-          <div class="cook-wrap">
-            <div class="row" style="justify-content:space-between;align-items:center">
-              <h3>Cook Mode — ${r.title}</h3>
-              <button class="btn small outline" id="closeCook">Close</button>
-            </div>
-            <ol class="steps big">
-              ${steps.map((s,i)=>`<li><label class="checkbox big"><input type="checkbox" data-cook="${i}" /><span>${s}</span></label></li>`).join('')}
-            </ol>
-          </div>
-        </dialog>
-      `;
-
-      // interactions
-      const favBtn = document.getElementById('favBtn');
-      function syncFavBtn() {
-        try {
-          const set = RecipeSite.getFavSet ? RecipeSite.getFavSet() : new Set();
-          const on = set.has(r.id);
-          favBtn.textContent = on ? '★ Saved' : '☆ Save';
-          favBtn.setAttribute('aria-pressed', on);
-          favBtn.classList.toggle('saved', on);
-        } catch {}
-      }
-      favBtn.addEventListener('click', () => { RecipeSite.toggleFav?.(r.id); syncFavBtn(); });
-      syncFavBtn();
-
-      document.getElementById('copyIng').addEventListener('click', async () => {
-        try { await navigator.clipboard.writeText(ing.join('\n')); alert('Ingredients copied!'); }
-        catch { alert('Copy failed'); }
-      });
-
-      const cookBtn = document.getElementById('cookModeBtn');
-      const cookDlg = document.getElementById('cookDialog');
-      const closeCook = document.getElementById('closeCook');
-      cookBtn.addEventListener('click', () => cookDlg.showModal());
-      closeCook.addEventListener('click', () => cookDlg.close());
-
-      // JSON-LD for SEO (best-effort)
-      try {
-        const ld = {
-          "@context": "https://schema.org/",
-          "@type": "Recipe",
-          "name": r.title,
-          "recipeCategory": r.category || "",
-          "recipeIngredient": r.ingredients || [],
-          "recipeInstructions": (r.steps||[]).map(s => ({ "@type":"HowToStep", "text": s })),
-          "image": r.image || ""
-        };
-        const tag = document.createElement('script');
-        tag.type = 'application/ld+json';
-        tag.textContent = JSON.stringify(ld);
-        document.head.appendChild(tag);
-      } catch {}
-    }
-
-    (async function boot() {
+    try{
+      if (!window.RecipeSite) throw new Error('App core not loaded.');
       const id = new URLSearchParams(location.search).get('id');
-      if (!id) { renderNotFound(); return; }
-      const recipe = await getRecipeSafe(id);
-      if (!recipe) { renderNotFound(); return; }
-      renderRecipe(recipe);
-    })();
+      if (!id) { el.innerHTML='<p class="muted">Missing recipe id.</p>'; return; }
+
+      const r = await RecipeSite.getRecipeById(id);
+      if (!r) { el.innerHTML = '<p class="muted">Recipe not found (DB returned nothing).</p>'; return; }
+
+      const imgHtml = r.image ? `<img class="hero-img" src="${r.image}" alt="${r.title}" />`
+                              : `<div class="noimg-badge" style="margin:8px 0">No image</div>`;
+
+      el.innerHTML = `
+        <header class="hero">
+          ${imgHtml}
+          <div class="hero-meta">
+            <h1>${r.title}</h1>
+            <span class="pill">${r.category || ''}</span>
+          </div>
+        </header>
+
+        <section class="card">
+          <h2>Ingredients</h2>
+          <ul class="ingredients">
+            ${(r.ingredients || []).map(i => `<li>${i}</li>`).join('') || '<li class="muted">No ingredients listed.</li>'}
+          </ul>
+        </section>
+
+        <section class="card">
+          <h2>Steps</h2>
+          <ol class="steps">
+            ${(r.steps || []).map(s => `<li>${s}</li>`).join('') || '<li class="muted">No steps provided.</li>'}
+          </ol>
+        </section>
+
+        <section class="card">
+          <h2>Nutrition (per serving)</h2>
+          <ul class="nutrition">
+            <li><strong>Calories:</strong> ${r.calories ?? 0}</li>
+            <li><strong>Protein:</strong> ${r.protein ?? 0} g</li>
+            <li><strong>Carbs:</strong> ${r.carbs ?? 0} g</li>
+            <li><strong>Fat:</strong> ${r.fat ?? 0} g</li>
+          </ul>
+        </section>
+      `;
+    }catch(e){
+      showAlert(e.message || String(e));
+      document.getElementById('detail').innerHTML = '';
+    }
+  });
   </script>
 </body>
 </html>

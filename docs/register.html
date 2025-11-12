@@ -6,76 +6,55 @@
   <title>RecipeSite — Register</title>
   <link rel="stylesheet" href="css/base.css" />
   <link rel="stylesheet" href="css/login.css" />
-  <script defer src="supabaseClient.js"></script>
-  <script defer src="js/common.js"></script>
+  <script>
+    // ✅ Put your project keys here
+    window.ENV_SUPABASE_URL = 'https://bhqeasmtrdfqncliipki.supabase.co/';
+    window.ENV_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJocWVhc210cmRmcW5jbGlpcGtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIwNzQ4NzgsImV4cCI6MjA3NzY1MDg3OH0.249y8yGBYKgcvnoKkdTft94Mu74kbO_Ioso2HFrTFpg';
+  </script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"
+        onload="
+          try {
+            window.supabase = window.supabase.createClient(
+              window.ENV_SUPABASE_URL,
+              window.ENV_SUPABASE_KEY,
+              { auth:{ persistSession:true, autoRefreshToken:true } }
+            );
+            console.log('[supabase] ready?', !!window.supabase);
+          } catch(e) { console.error('[supabase] init error', e); }
+        "></script>
+  <script src="js/common.js" defer></script>
 </head>
 <body class="auth-body">
-  <main class="auth-wrap">
-    <div class="auth-card" role="form" aria-labelledby="regTitle">
-      <div class="auth-brand">
-        <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 3a1 1 0 0 0-1 1v2h10a1 1 0 1 1 0 2H7v2h8.5a3.5 3.5 0 1 1 0 7H12v2h4.5a5.5 5.5 0 0 0 0-11H6V4a1 1 0 0 1 1-1h1z"/></svg>
-        <span>RecipeSite</span>
-      </div>
-
-      <h1 id="regTitle">Create your account</h1>
-      <p class="muted" id="regHelp">You’ll confirm via email. If cloud isn’t configured, registration is disabled.</p>
-
-      <form id="regForm" class="auth-form" novalidate>
-        <label class="field">
-          <span>Display name</span>
-          <input id="displayName" placeholder="e.g. Redon" />
-        </label>
-        <label class="field">
-          <span>Email</span>
-          <input id="regEmail" type="email" autocomplete="email" placeholder="you@example.com" />
-        </label>
-        <label class="field">
-          <span>Password</span>
-          <input id="regPassword" type="password" autocomplete="new-password" placeholder="At least 8 characters" />
-        </label>
-        <label class="field">
-          <span>Confirm password</span>
-          <input id="regPassword2" type="password" autocomplete="new-password" placeholder="Repeat password" />
-        </label>
-        <button class="btn full" type="submit">Register</button>
-      </form>
-
-      <div class="auth-footer">
-        <a class="link" href="index.html">← Back to sign in</a>
-      </div>
-    </div>
-  </main>
-
-  <script>
-    const hasSupabase = !!(window.supabase && window.supabase._clientReady !== false);
-    if (!hasSupabase) {
-      document.getElementById('regHelp').textContent =
-        'Cloud auth not configured: set up Supabase to enable registration.';
-    }
-
-    document.getElementById('regForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      if (!hasSupabase) { alert('Registration requires cloud auth to be configured.'); return; }
-      const name = document.getElementById('displayName').value.trim();
-      const email = document.getElementById('regEmail').value.trim();
-      const pw1 = document.getElementById('regPassword').value;
-      const pw2 = document.getElementById('regPassword2').value;
-
-      if (!email || !pw1) { alert('Email and password are required'); return; }
-      if (pw1 !== pw2) { alert('Passwords do not match'); return; }
-
-      try {
-        const { data, error } = await supabase.auth.signUp({
-          email, password: pw1,
-          options: { data: { username: name || email.split('@')[0] } }
-        });
-        if (error) throw error;
-        alert('Check your email to confirm your account, then sign in.');
-        location.href = 'index.html';
-      } catch (err) {
-        alert(err.message || 'Registration failed');
-      }
-    });
-  </script>
+<main class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-brand"><svg width="28" height="28" viewBox="0 0 24 24"><path fill="currentColor" d="M8 3a1 1 0 0 0-1 1v2h10a1 1 0 1 1 0 2H7v2h8.5a3.5 3.5 0 1 1 0 7H12v2h4.5a5.5 5.5 0 0 0 0-11H6V4a1 1 0 0 1 1-1h1z"/></svg><span>RecipeSite</span></div>
+    <h1>Create your account</h1>
+    <form id="regForm" class="auth-form" novalidate>
+      <label class="field"><span>Display name</span><input id="displayName" placeholder="e.g. Redon" /></label>
+      <label class="field"><span>Email</span><input id="regEmail" type="email" required placeholder="you@example.com" /></label>
+      <label class="field"><span>Password</span><input id="regPassword" type="password" required placeholder="At least 8 characters" /></label>
+      <label class="field"><span>Confirm</span><input id="regPassword2" type="password" required placeholder="Repeat password" /></label>
+      <button class="btn full" type="submit">Register</button>
+    </form>
+    <div class="auth-footer"><a class="link" href="index.html">← Back to sign in</a></div>
+  </div>
+</main>
+<script>
+  document.getElementById('regForm').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    if (!window.supabase) return alert('Cloud auth not configured.');
+    const name=document.getElementById('displayName').value.trim();
+    const email=document.getElementById('regEmail').value.trim();
+    const p1=document.getElementById('regPassword').value;
+    const p2=document.getElementById('regPassword2').value;
+    if (p1!==p2) return alert('Passwords do not match');
+    try {
+      const { error } = await supabase.auth.signUp({ email, password: p1, options: { data: { username: name || email.split('@')[0] } } });
+      if (error) throw error;
+      alert('Check your email to confirm, then sign in.');
+      location.href='index.html';
+    } catch(err){ alert(err.message || 'Registration failed'); }
+  });
+</script>
 </body>
 </html>

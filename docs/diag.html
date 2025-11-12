@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Supabase Deep Diagnostics</title>
+<style>
+  :root{--ok:#16a34a;--warn:#f59e0b;--err:#ef4444;--bg:#0b1320;--card:#111827;--mut:#94a3b8}
+  body{font-family:system-ui,Segoe UI,Inter,Arial,sans-serif;background:var(--bg);color:#e5e7eb;margin:0;padding:24px}
+  .card{background:var(--card);border:1px solid #223;max-width:980px;border-radius:12px;padding:20px}
+  h1{margin:0 0 12px}
+  code,pre{background:#0f172a;border-radius:8px;padding:6px 8px}
+  pre{overflow:auto}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .pill{padding:4px 8px;border-radius:999px;border:1px solid #334155;background:#0f172a}
+  .ok{color:var(--ok)} .warn{color:var(--warn)} .err{color:var(--err)}
+</style>
+
+<!-- 👇 EDIT THESE TWO VALUES (exactly from Supabase Settings → API) -->
+<script>
+    window.ENV_SUPABASE_URL = 'https://bhqeasmtrdfqncliipki.supabase.co/';
+    window.ENV_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJocWVhc210cmRmcW5jbGlpcGtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIwNzQ4NzgsImV4cCI6MjA3NzY1MDg3OH0.249y8yGBYKgcvnoKkdTft94Mu74kbO_Ioso2HFrTFpg';
+</script>
+
+<!-- Load SDK from CDN (bypasses any local path issues) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+  <div class="card" id="out"><h1>Supabase Diagnostics</h1></div>
+
+<script>
+(async function(){
+  const out = document.getElementById('out');
+  const p = (html) => out.insertAdjacentHTML('beforeend', html);
+
+  // 0) Basic page sanity
+  p(`<div class="row"><span class="pill">origin</span><code>${location.origin || 'file://'}${location.pathname}</code></div>`);
+  if (location.protocol === 'file:') {
+    p(`<p class="warn">You are opening the file via <code>file://</code>. Run this through a local server (e.g., VS Code Live Server) to avoid mixed-content/CORS issues.</p>`);
+  }
+
+  // 1) ENV presence & quick validation
+  const url = String(window.ENV_SUPABASE_URL || '');
+  const key = String(window.ENV_SUPABASE_KEY || '');
+  p(`<div class="row"><span class="pill">ENV URL</span><code>${url || '(empty)'}</code></div>`);
+  p(`<div class="row"><span class="pill">ENV KEY</span><code>${key ? (key.slice(0,6)+'…'+key.slice(-6)) : '(empty)'}</code></div>`);
+  if (!/^https:\/\/.+\.supabase\.co\/?$/.test(url)) {
+    p(`<p class="err">ENV_SUPABASE_URL looks wrong. Copy it from <em>Settings → API → Project URL</em>. Must look like <code>https://xxxxx.supabase.co</code>.</p>`);
+    return;
+  }
+  if (!key || key.length < 50) {
+    p(`<p class="err">ENV_SUPABASE_KEY seems missing/short. Use the <strong>anon public</strong> key from <em>Settings → API</em> (not service_role).</p>`);
+    return;
+  }
+
+  // 2) Try to create client
+  let clientOk = false;
+  try {
+    window.supabase = window.supabase.createClient(url, key, { auth: { persistSession:true, autoRefreshToken:true } });
+    clientOk = !!window.supabase;
+  } catch (e) {
+    p(`<p class="err">Failed to init SDK: ${e.message}</p>`);
+  }
+  p(`<p>SDK client present? ${clientOk ? '<span class="ok">yes</span>' : '<span class="err">no</span>'}</p>`);
+  if (!clientOk) return;
+
+  // 3) SDK query test (needs public SELECT on "recipes")
+  try {
+    const { data, error } = await supabase.from('recipes')
+      .select('id,title,image', { count: 'exact' })
+      .limit(3);
+    if (error) {
+      p(`<p class="err">SDK query error: ${error.message}</p>`);
+    } else {
+      p(`<p class="ok">SDK query ok. Rows: ${data?.length ?? 0}</p>`);
+      p(`<pre>${JSON.stringify(data, null, 2)}</pre>`);
+    }
+  } catch(e) {
+    p(`<p class="err">SDK threw: ${e.message}</p>`);
+  }
+
+  // 4) RAW REST test (bypasses SDK): helps diagnose RLS/CORS/Key
+  try {
+    const restUrl = url.replace(/\/+$/,'') + '/rest/v1/recipes?select=id,title&limit=1';
+    const res = await fetch(restUrl, {
+      headers: {
+        'apikey': key,
+        'Authorization': 'Bearer ' + key
+      }
+    });
+    p(`<div class="row"><span class="pill">REST GET</span><code>${res.status} ${res.statusText}</code></div>`);
+    const text = await res.text();
+    p(`<pre>${text}</pre>`);
+    if (res.status === 401) p(`<p class="err">401 Unauthorized → anon key invalid / wrong key type.</p>`);
+    if (res.status === 403) p(`<p class="err">403 Forbidden → RLS blocking. Add public SELECT policy on <code>recipes</code>.</p>`);
+    if (res.status === 404) p(`<p class="err">404 Not found → table name mismatch (is it really <code>recipes</code>?).</p>`);
+  } catch (e) {
+    p(`<p class="err">REST fetch failed: ${e.message}</p>`);
+    p(`<p class="warn">If error mentions mixed content/CORS, ensure this page is served over http(s), not file://</p>`);
+  }
+
+  // 5) Storage public URL test (optional): shows how an image URL should look
+  p(`<p class="muted">FYI: a typical Storage public URL looks like:<br>
+     <code>${url.replace(/\/+$/,'')}/storage/v1/object/public/recipe-images/your-file.jpg</code></p>`);
+})();
+</script>
+</body>
+</html>
