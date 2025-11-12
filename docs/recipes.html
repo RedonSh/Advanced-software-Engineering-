@@ -6,13 +6,13 @@
   <title>RecipeSite — Discover & Cook</title>
   <link rel="stylesheet" href="css/base.css" />
   <link rel="stylesheet" href="css/recipes.css" />
+
+  <!-- Provide your Supabase env values here (no leading spaces!) -->
   <script>
-    // Paste your real Supabase credentials here
-    window.ENV_SUPABASE_URL = 'https://bhqeasmtrdfqncliipki.supabase.co';
-    window.ENV_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJocWVhc210cmRmcW5jbGlpcGtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIwNzQ4NzgsImV4cCI6MjA3NzY1MDg3OH0.249y8yGBYKgcvnoKkdTft94Mu74kbO_Ioso2HFrTFpg';
+    window.ENV_SUPABASE_URL = 'https://YOUR-PROJECT.supabase.co';
+    window.ENV_SUPABASE_KEY = 'YOUR-ANON-PUBLIC-KEY';
   </script>
-  <script type="module" src="js/supabaseClient.js"></script> 
-   
+  <script defer src="supabaseClient.js"></script>
   <script defer src="js/common.js"></script>
 </head>
 <body>
@@ -25,7 +25,6 @@
           <a href="#generator" id="tab-generator">Generator</a>
           <a href="#pantry" id="tab-pantry">Pantry</a>
           <a href="#favourites" id="tab-favourites">Favourites</a>
-          <a href="#nutrition" id="tab-nutrition">Nutrition</a>
         </nav>
       </div>
       <div class="header-actions">
@@ -132,7 +131,6 @@
         </div>
       </div>
 
-      <!-- Upload Feature -->
       <div class="card" id="uploadSection">
         <h2>Add Your Own Recipe</h2>
         <div class="grid two">
@@ -156,17 +154,6 @@
 
       <div class="grid three" id="favGrid"></div>
     </section>
-
-    <!-- NUTRITION -->
-    <section class="route" data-route="nutrition" hidden>
-      <div class="card">
-        <h1>Recipe Nutrition</h1>
-        <label class="field"><span>Select a recipe</span>
-          <select id="nutriSelect"></select>
-        </label>
-      </div>
-      <div class="card" id="nutritionPanel"></div>
-    </section>
   </main>
 
   <script>
@@ -189,15 +176,14 @@
 
     // ---------- Router ----------
     const routes = [...document.querySelectorAll('.route')];
-    function showRoute(){
+    async function showRoute(){
       const hash = (location.hash || '#browse').slice(1);
       routes.forEach(s => s.hidden = s.dataset.route !== hash);
       document.querySelectorAll('.main-nav a').forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#'+hash));
 
-      if (hash==='browse') renderBrowse(true);
+      if (hash==='browse') await renderBrowse(true);
       if (hash==='generator') initGenerator();
       if (hash==='favourites') renderFavourites();
-      if (hash==='nutrition') initNutrition();
       if (hash==='pantry') initPantry();
     }
     addEventListener('hashchange', showRoute);
@@ -214,12 +200,14 @@
     const nextBtn = document.getElementById('nextPage');
     const pageInfo = document.getElementById('pageInfo');
     let page = 1, pageSize = 9, lastResults = [];
+    let browseInitDone = false;
 
     function debounce(fn, ms=250){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms);} }
 
-    function initBrowse(){
-      if (cat.options.length) return;
-      RecipeSite.listCategories().forEach(c=>{
+    async function initBrowse(){
+      if (browseInitDone) return;
+      const cats = await RecipeSite.listCategories();
+      cats.forEach(c=>{
         const o = document.createElement('option'); o.value=c; o.textContent=c; cat.appendChild(o);
       });
       const fav = document.createElement('option');
@@ -244,7 +232,6 @@
       prevBtn.onclick = ()=>{ if(page>1){ page--; renderBrowse(false); } };
       nextBtn.onclick = ()=>{ const max = Math.max(1, Math.ceil(lastResults.length/pageSize)); if(page<max){ page++; renderBrowse(false); } };
 
-      // header search
       const gs=document.getElementById('globalSearch'), gsBtn=document.getElementById('globalSearchBtn');
       function runGS(){
         const qv=(gs.value||'').trim(); location.hash='#browse';
@@ -252,29 +239,33 @@
       }
       gsBtn.addEventListener('click', runGS);
       gs.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); runGS(); } });
+
+      browseInitDone = true;
     }
 
     function sortResults(arr){
       const v = sortSel.value;
       if (v==='title') return arr.slice().sort((a,b)=>a.title.localeCompare(b.title));
-      if (v==='cal_asc') return arr.slice().sort((a,b)=>a.nutrition.calories-b.nutrition.calories);
-      if (v==='cal_desc') return arr.slice().sort((a,b)=>b.nutrition.calories-a.nutrition.calories);
+      if (v==='cal_asc') return arr.slice().sort((a,b)=>(a.nutrition?.calories||0)-(b.nutrition?.calories||0));
+      if (v==='cal_desc') return arr.slice().sort((a,b)=>(b.nutrition?.calories||0)-(a.nutrition?.calories||0));
       return arr;
     }
 
-    function renderBrowse(reset=false){
-      initBrowse();
+    async function renderBrowse(reset=false){
+      await initBrowse();
+
       const query = (q.value||'').toLowerCase().trim();
       const category = cat.value;
       const favSet = RecipeSite.getFavSet();
       const mode = window.__quickFilter || 'all';
 
-      const filtered = RecipeSite.listRecipes().filter(r=>{
+      const all = await RecipeSite.listRecipes();
+      const filtered = all.filter(r=>{
         const mq = !query || r.title.toLowerCase().includes(query) || r.ingredients.some(i=>i.toLowerCase().includes(query));
         const mc = (category==='All') || (category==='Favourites' && favSet.has(r.id)) || (category!=='Favourites' && r.category===category);
         const mf = (mode==='all') ? true
                 : (mode==='vegan') ? (r.category==='Vegan')
-                : (mode==='lowcal') ? (r.nutrition.calories<=400)
+                : (mode==='lowcal') ? ((r.nutrition?.calories||0)<=400)
                 : (mode==='dinner') ? (r.category==='Dinner')
                 : (mode==='breakfast') ? (r.category==='Breakfast')
                 : true;
@@ -358,15 +349,18 @@
       const genBtn = document.getElementById('generateBtn');
       const surpriseBtn = document.getElementById('surpriseBtn');
 
-      RecipeSite.listCategories().forEach(c=>{
-        const o=document.createElement('option'); o.value=c; o.textContent=c; catSel.appendChild(o);
+      RecipeSite.listCategories().then(cats=>{
+        cats.forEach(c=>{
+          const o=document.createElement('option'); o.value=c; o.textContent=c; catSel.appendChild(o);
+        });
+        catSel.value='All';
       });
-      catSel.value='All';
 
-      function pool(){
+      async function pool(){
         const cat=catSel.value;
         const key=(keyInp.value||'').toLowerCase().trim();
-        return RecipeSite.listRecipes().filter(r=>{
+        const list = await RecipeSite.listRecipes();
+        return list.filter(r=>{
           const mc = (cat==='All') || r.category===cat;
           const mk = !key || r.title.toLowerCase().includes(key) || r.ingredients.some(i=>i.toLowerCase().includes(key));
           return mc && mk;
@@ -379,92 +373,13 @@
         syncFavButtons(out);
         out.scrollIntoView({behavior:'smooth', block:'start'});
       }
-      genBtn.addEventListener('click', ()=>{ const p=pool(); render(p.length ? p[Math.floor(Math.random()*p.length)] : null); });
-      surpriseBtn.addEventListener('click', ()=>{ const all=RecipeSite.listRecipes(); render(all[Math.floor(Math.random()*all.length)]); });
+      genBtn.addEventListener('click', async ()=>{ const p=await pool(); render(p.length ? p[Math.floor(Math.random()*p.length)] : null); });
+      surpriseBtn.addEventListener('click', async ()=>{ const all=await RecipeSite.listRecipes(); render(all[Math.floor(Math.random()*all.length)]); });
 
       genInit=true;
     }
 
-    // ---------- Favourites + Upload ----------
-    function renderFavourites(){
-      const grid = document.getElementById('favGrid');
-      const favs = RecipeSite.getFavSet();
-      const all  = RecipeSite.listRecipes();
-      grid.innerHTML = '';
-
-      const userRecipes = JSON.parse(localStorage.getItem('userRecipes') || '[]');
-
-      if (!favs.size && !userRecipes.length){
-        const empty = document.createElement('div');
-        empty.className='card';
-        empty.innerHTML='<h2>No favourites yet</h2><p class="muted">Save recipes from Browse or add your own below.</p>';
-        grid.appendChild(empty);
-      } else {
-        all.filter(r=>favs.has(r.id)).forEach(r=> grid.appendChild(cardNode(r)));
-        userRecipes.forEach(r=>{
-          const card = document.createElement('article');
-          card.className = 'card';
-          card.innerHTML = `
-            <div class="row"><h2 class="card-title">${r.title}</h2></div>
-            <div class="pill cat">${r.category}</div>
-            <p class="muted">Ingredients: ${r.ingredients.join(', ')}</p>
-          `;
-          grid.appendChild(card);
-        });
-      }
-
-      const logoutBtn = document.getElementById('logoutBtn');
-      if (logoutBtn) logoutBtn.onclick = ()=>{ RecipeSite.logout(); updateUserUI(); renderFavourites(); };
-
-      const refresh = document.getElementById('refreshFavsBtn');
-      if (refresh) refresh.onclick = ()=> renderFavourites();
-
-      const addBtn = document.getElementById('myAddRecipeBtn');
-      if (addBtn){
-        addBtn.onclick = ()=>{
-          const title = document.getElementById('myTitle').value.trim();
-          const category = document.getElementById('myCategory').value.trim() || 'Misc';
-          const ingredients = document.getElementById('myIngredients').value.split(',').map(i => i.trim()).filter(Boolean);
-          const image = document.getElementById('myImage').value.trim() || 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=1200&auto=format&fit=crop';
-          if (!title || ingredients.length === 0) { alert('Please fill in at least a title and one ingredient.'); return; }
-          const recipe = { id: 'user-' + Date.now(), title, category, ingredients, image, nutrition:{calories:0,protein:0,carbs:0,fat:0} };
-          const list = JSON.parse(localStorage.getItem('userRecipes') || '[]');
-          list.push(recipe); localStorage.setItem('userRecipes', JSON.stringify(list));
-          document.getElementById('myTitle').value='';
-          document.getElementById('myCategory').value='';
-          document.getElementById('myIngredients').value='';
-          document.getElementById('myImage').value='';
-          renderFavourites();
-          alert('Recipe added!');
-        };
-      }
-    }
-
-    // ---------- Nutrition ----------
-    function initNutrition(){
-      const sel = document.getElementById('nutriSelect');
-      const panel = document.getElementById('nutritionPanel');
-      if (!sel.options.length){
-        const all = RecipeSite.listRecipes();
-        sel.innerHTML = '<option value="">Select…</option>' + all.map(r=>`<option value="${r.id}">${r.title}</option>`).join('');
-        sel.addEventListener('change', ()=>{
-          const r = RecipeSite.getRecipeById(sel.value);
-          if (!r){ panel.innerHTML = '<p class="muted">Choose a recipe to see nutrition facts.</p>'; return; }
-          panel.innerHTML = `
-            <h2>${r.title}</h2>
-            <div class="grid two">
-              <div class="card"><strong>Calories</strong><div>${r.nutrition.calories} kcal</div></div>
-              <div class="card"><strong>Protein</strong><div>${r.nutrition.protein} g</div></div>
-              <div class="card"><strong>Carbs</strong><div>${r.nutrition.carbs} g</div></div>
-              <div class="card"><strong>Fat</strong><div>${r.nutrition.fat} g</div></div>
-            </div>
-          `;
-        });
-      }
-      panel.innerHTML = '<p class="muted">Choose a recipe to see nutrition facts.</p>';
-    }
-
-    // ---------- Pantry ----------
+    // ---------- Pantry (local storage for now) ----------
     const pantryList = document.getElementById('pantryList');
     const addPantryBtn = document.getElementById('addPantryBtn');
     let editIndex = null;
@@ -487,7 +402,6 @@
         `;
         card.querySelector('[data-del]').onclick = () => {
           pantry.splice(idx, 1);
-          localStorage.setItem('panry', JSON.stringify(pantry)); // (typo avoided below)
           localStorage.setItem('pantry', JSON.stringify(pantry));
           renderPantry(); editIndex=null; resetPantryForm();
         };

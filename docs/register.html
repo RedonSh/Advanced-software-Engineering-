@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RecipeSite — Register</title>
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/login.css" />
+  <script defer src="supabaseClient.js"></script>
+  <script defer src="js/common.js"></script>
+</head>
+<body class="auth-body">
+  <main class="auth-wrap">
+    <div class="auth-card" role="form" aria-labelledby="regTitle">
+      <div class="auth-brand">
+        <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 3a1 1 0 0 0-1 1v2h10a1 1 0 1 1 0 2H7v2h8.5a3.5 3.5 0 1 1 0 7H12v2h4.5a5.5 5.5 0 0 0 0-11H6V4a1 1 0 0 1 1-1h1z"/></svg>
+        <span>RecipeSite</span>
+      </div>
+
+      <h1 id="regTitle">Create your account</h1>
+      <p class="muted" id="regHelp">You’ll confirm via email. If cloud isn’t configured, registration is disabled.</p>
+
+      <form id="regForm" class="auth-form" novalidate>
+        <label class="field">
+          <span>Display name</span>
+          <input id="displayName" placeholder="e.g. Redon" />
+        </label>
+        <label class="field">
+          <span>Email</span>
+          <input id="regEmail" type="email" autocomplete="email" placeholder="you@example.com" />
+        </label>
+        <label class="field">
+          <span>Password</span>
+          <input id="regPassword" type="password" autocomplete="new-password" placeholder="At least 8 characters" />
+        </label>
+        <label class="field">
+          <span>Confirm password</span>
+          <input id="regPassword2" type="password" autocomplete="new-password" placeholder="Repeat password" />
+        </label>
+        <button class="btn full" type="submit">Register</button>
+      </form>
+
+      <div class="auth-footer">
+        <a class="link" href="index.html">← Back to sign in</a>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const hasSupabase = !!(window.supabase && window.supabase._clientReady !== false);
+    if (!hasSupabase) {
+      document.getElementById('regHelp').textContent =
+        'Cloud auth not configured: set up Supabase to enable registration.';
+    }
+
+    document.getElementById('regForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!hasSupabase) { alert('Registration requires cloud auth to be configured.'); return; }
+      const name = document.getElementById('displayName').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const pw1 = document.getElementById('regPassword').value;
+      const pw2 = document.getElementById('regPassword2').value;
+
+      if (!email || !pw1) { alert('Email and password are required'); return; }
+      if (pw1 !== pw2) { alert('Passwords do not match'); return; }
+
+      try {
+        const { data, error } = await supabase.auth.signUp({
+          email, password: pw1,
+          options: { data: { username: name || email.split('@')[0] } }
+        });
+        if (error) throw error;
+        alert('Check your email to confirm your account, then sign in.');
+        location.href = 'index.html';
+      } catch (err) {
+        alert(err.message || 'Registration failed');
+      }
+    });
+  </script>
+</body>
+</html>

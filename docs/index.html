@@ -6,12 +6,12 @@
   <title>RecipeSite — Login</title>
   <link rel="stylesheet" href="css/base.css" />
   <link rel="stylesheet" href="css/login.css" />
+
   <script>
-    // Paste your real Supabase credentials here
-    window.ENV_SUPABASE_URL = ' https://bhqeasmtrdfqncliipki.supabase.co';
-    window.ENV_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJocWVhc210cmRmcW5jbGlpcGtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIwNzQ4NzgsImV4cCI6MjA3NzY1MDg3OH0.249y8yGBYKgcvnoKkdTft94Mu74kbO_Ioso2HFrTFpg';
+    window.ENV_SUPABASE_URL = 'https://YOUR-PROJECT.supabase.co';
+    window.ENV_SUPABASE_KEY = 'YOUR-ANON-PUBLIC-KEY';
   </script>
-  <script type="module" src="js/supabaseClient.js"></script>
+  <script defer src="supabaseClient.js"></script>
   <script defer src="js/common.js"></script>
 </head>
 <body class="auth-body">
@@ -21,9 +21,8 @@
       <nav class="main-nav" aria-label="Primary">
         <a href="recipes.html#browse">Browse</a>
         <a href="recipes.html#generator">Generator</a>
-        <a href="recipes.html#favourites">Favourites</a>
-        <a href="recipes.html#nutrition">Nutrition</a>
         <a href="recipes.html#pantry">Pantry</a>
+        <a href="recipes.html#favourites">Favourites</a>
       </nav>
     </div>
   </header>
@@ -31,24 +30,46 @@
   <main class="auth-wrap">
     <div class="auth-card" role="form" aria-labelledby="loginTitle">
       <div class="auth-brand">
-        <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 3a1 1 0 0 0-1 1v2h10a1 1 0 1 1 0 2H7v2h8.5a3.5 3.5 0 1 1 0 7H12v2h4.5a5.5 5.5 0 0 0 0-11H6V4a1 1 0 0 1 1-1h1z"/></svg>
+        <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="currentColor" d="M8 3a1 1 0 0 0-1 1v2h10a1 1 0 1 1 0 2H7v2h8.5a3.5 3.5 0 1 1 0 7H12v2h4.5a5.5 5.5 0 0 0 0-11H6V4a1 1 0 0 1 1-1h1z"/>
+        </svg>
         <span>RecipeSite</span>
       </div>
 
       <h1 id="loginTitle">Sign in</h1>
-      <p class="muted">Use any username to preview. Password is not checked.</p>
+      <p class="muted">Use your email and password.</p>
 
-      <form id="loginForm" class="auth-form" novalidate>
+      <form id="loginFormCloud" class="auth-form" novalidate>
         <label class="field">
-          <span>Username</span>
-          <input id="username" autocomplete="username" required placeholder="e.g. redon" />
+          <span>Email</span>
+          <input id="email" type="email" autocomplete="email" placeholder="you@example.com" required />
         </label>
         <label class="field">
           <span>Password</span>
-          <input id="password" type="password" autocomplete="current-password" required placeholder="••••••" />
+          <input id="password" type="password" autocomplete="current-password" placeholder="••••••••" required />
         </label>
         <button class="btn full" type="submit">Sign in</button>
       </form>
+
+      <div class="auth-row">
+        <a class="link" href="register.html">Create an account</a>
+        <a class="link" href="#" id="toggleForgot">Forgot password?</a>
+      </div>
+
+      <div id="forgotWrap" class="card" hidden style="margin-top:12px">
+        <h2>Reset your password</h2>
+        <p class="muted">Enter your email and we'll send a reset link.</p>
+        <form id="forgotForm" class="auth-form" novalidate>
+          <label class="field">
+            <span>Email</span>
+            <input id="forgotEmail" type="email" placeholder="you@example.com" required />
+          </label>
+          <button class="btn" type="submit">Send reset link</button>
+        </form>
+        <p class="muted small">
+          After clicking the link in your email, you'll land on <code>reset.html</code> to set a new password.
+        </p>
+      </div>
 
       <div class="auth-footer">
         <a class="link" href="recipes.html#browse">← Back to Discover</a>
@@ -56,37 +77,48 @@
     </div>
   </main>
 
-  <script type="module">
-    const form = document.getElementById('loginForm');
-    const email = document.getElementById('username'); // treat as email input
-    const pass  = document.getElementById('password');
-  
-    form.addEventListener('submit', async (e) => {
+  <script>
+    document.getElementById('toggleForgot').addEventListener('click', (e) => {
       e.preventDefault();
-      const em = (email.value || '').trim();
-      const pw = (pass.value  || '').trim();
-      if (!em || !pw) {
-        alert('Email and password required');
-        return;
-      }
-  
-      // Try sign-in; if user doesn’t exist, sign-up automatically
-      let { error } = await supabase.auth.signInWithPassword({ email: em, password: pw });
-      if (error && /invalid/i.test(error.message)) {
-        ({ error } = await supabase.auth.signUp({ email: em, password: pw }));
-      }
-      if (error) {
-        alert(error.message);
-        return;
-      }
-  
-      // Keep the header badge behavior
-      const profileName = em.split('@')[0];
-      RecipeSite.setUser({ name: profileName });
-  
-      const params = new URLSearchParams(location.search);
-      location.href = params.get('next') || 'recipes.html#favourites';
+      const box = document.getElementById('forgotWrap');
+      box.hidden = !box.hidden;
     });
-  </script>  
+
+    document.getElementById('loginFormCloud').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      if (!email || !password) { alert('Email and password required'); return; }
+      if (!window.supabase) { alert('Cloud auth is not configured.'); return; }
+
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        RecipeSite.setUser({ name: data.user.user_metadata?.username || email });
+        const next = new URLSearchParams(location.search).get('next') || 'recipes.html#favourites';
+        location.href = next;
+      } catch (err) {
+        alert(err.message || 'Login failed');
+      }
+    });
+
+    document.getElementById('forgotForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('forgotEmail').value.trim();
+      if (!email) { alert('Enter your email'); return; }
+      if (!window.supabase) { alert('Cloud auth is not configured.'); return; }
+
+      try {
+        const redirectTo = new URL(
+          location.origin + location.pathname.replace(/index\.html$/,'') + 'reset.html'
+        ).toString();
+        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+        if (error) throw error;
+        alert('Reset link sent. Check your email.');
+      } catch (err) {
+        alert(err.message || 'Failed to send reset link');
+      }
+    });
+  </script>
 </body>
 </html>

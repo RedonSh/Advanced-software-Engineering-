@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RecipeSite — Reset Password</title>
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/login.css" />
+  <script defer src="supabaseClient.js"></script>
+</head>
+<body class="auth-body">
+  <main class="auth-wrap">
+    <div class="auth-card" role="form" aria-labelledby="resetTitle">
+      <div class="auth-brand">
+        <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 3a1 1 0 0 0-1 1v2h10a1 1 0 1 1 0 2H7v2h8.5a3.5 3.5 0 1 1 0 7H12v2h4.5a5.5 5.5 0 0 0 0-11H6V4a1 1 0 0 1 1-1h1z"/></svg>
+        <span>RecipeSite</span>
+      </div>
+
+      <h1 id="resetTitle">Set a new password</h1>
+      <p class="muted">You arrived here from the password reset email.</p>
+
+      <form id="resetForm" class="auth-form" novalidate>
+        <label class="field">
+          <span>New password</span>
+          <input id="newPw1" type="password" autocomplete="new-password" placeholder="New password" />
+        </label>
+        <label class="field">
+          <span>Confirm password</span>
+          <input id="newPw2" type="password" autocomplete="new-password" placeholder="Repeat new password" />
+        </label>
+        <button class="btn full" type="submit">Update password</button>
+      </form>
+
+      <div class="auth-footer">
+        <a class="link" href="index.html">← Back to sign in</a>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Supabase v2 automatically parses the hash on arrival for recovery links.
+    // We just need to ensure a session exists, then update the password.
+    document.getElementById('resetForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const p1 = document.getElementById('newPw1').value;
+      const p2 = document.getElementById('newPw2').value;
+      if (!p1) { alert('Enter a new password'); return; }
+      if (p1 !== p2) { alert('Passwords do not match'); return; }
+      try {
+        const { data: sess } = await supabase.auth.getSession();
+        if (!sess?.session) {
+          alert('Reset link is invalid or expired. Request a new one from the login page.');
+          return;
+        }
+        const { error } = await supabase.auth.updateUser({ password: p1 });
+        if (error) throw error;
+        alert('Password updated. You can now sign in.');
+        location.href = 'index.html';
+      } catch (err) {
+        alert(err.message || 'Failed to update password');
+      }
+    });
+  </script>
+</body>
+</html>
