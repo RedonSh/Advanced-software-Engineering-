@@ -11,7 +11,6 @@
 
 
 # Project planning BEFORE iteration-1, (see chapters 1-3)
-Checklist/TODOs: 
 
 #### Week 1
  From the first week, after forming our team, we began searching for a stakeholder to develop a website. We found one and conducted an interview with him, during which he expressed interest in creating a recipe website. Based on the interview, we developed user stories that helped us identify key features such as a login page, pantry management system, shopping list, recipe suggestions based on available pantry items, an option to save favorite recipes, and features showing nutrition facts and personalized recommendations. 
@@ -101,21 +100,50 @@ Iteration 1 officially closed — total estimated velocity achieved (~53 days of
 
 Total: 21 days
 
-#### Iteration 1 Report: 
-
-https://github.com/RedonSh/Advanced-software-Engineering-/blob/main/iteration_1.md
-
-#### Iteration 1 User Stories: 
-
-https://github.com/RedonSh/Advanced-software-Engineering-/blob/main/user_story_iteration_01.md
 
 
-# Iteration 2 [duration 3-4 weeks], add your start and end dates
-Goal is to have 2 iterations during a trimester of teaching.
-1. [user story title](./user_stories/user_story_01_title.md), priority XX, YY days 
-2. ...
+# Iteration 2, 30/10 - 12/11
 
-Total: YY days
+#### Week 7 (31/10 – 6/11)
+
+Iteration 2 officially started.
+
+Upgraded Smart Shopping List: deduped items by pantry inventory, normalized units, and aggregated quantities by store/aisle.
+
+Added one-tap “Add to Cart” behavior (UI), with backend writes prepared.
+
+Created Supabase schema for saved lists and shared links (tables + initial RLS scaffolding).
+
+Instrumented analytics events: list_created, item_checked, list_shared_init.
+
+
+#### Week 8 (7/11 – 13/11)
+Implemented Save/Unsave for Recipes and Lists (auth-gated, optimistic UI).
+
+Generated shareable deep links (read-only) with expirations; enforced RLS for anonymous view.
+
+Added nutrition summaries (calories/macros) and health tags; surfaced tags in Search filters and Recipe Details.
+
+Verified persistence to Supabase and logs for share events.
+
+
+#### Week 9 (14/11 – 20/11)
+Delivered Healthy Swap suggestions with inline chooser and real-time macro deltas.
+
+Finalized loading/error states; performance pass on list generation and recipe detail renders.
+
+Wrote unit tests (unit normalization, macro calc, swap scoring) and E2E flow tests (Search → Save → Generate List → Share → Open Link → Swap).
+
+Got the database running (Supabase) and the backend is almost completed, with remaining endpoints stubbed and tracked for Iteration 3 kickoff.
+
+
+Task 3 (Back End) marked completed – 20/11/25.
+
+
+
+Total: 21 days
+
+# Iteration 3, 13/11/25 - 26/11/25
 
 ### Not enough time/developers: 
 1. [user story title](./user_stories/user_story_01_title.md), priority XX, YY days 
@@ -124,7 +152,7 @@ Total: YY days
 Total: YY days
 
 # Actual iterations
-1. [Iteration-1](./iteration_1.md)
+1. Iteration 1: [(https://github.com/RedonSh/Advanced-software-Engineering-/blob/main/iteration_1.md](https://github.com/RedonSh/Advanced-software-Engineering-/blob/main/iteration_1.md)
 2. [Iteration-2](./iteration_2.md)
 
 
