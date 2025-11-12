@@ -152,7 +152,7 @@ Total: 21 days
 Total: YY days
 
 # Actual iterations
-1. [Iteration-1]([[./iteration_1.md](https://github.com/RedonSh/Advanced-software-Engineering-/blob/main/iteration_1.md)](https://github.com/RedonSh/Advanced-software-Engineering-/blob/main/iteration_1.md))
+1. [(https://github.com/RedonSh/Advanced-software-Engineering-/blob/main/iteration_1.md](https://github.com/RedonSh/Advanced-software-Engineering-/blob/main/iteration_1.md))
 2. [Iteration-2](./iteration_2.md)
 
 
