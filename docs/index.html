@@ -5,63 +5,42 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>RecipeSite — Sign in</title>
 
-  <!-- Your site styles -->
   <link rel="stylesheet" href="css/base.css" />
   <link rel="stylesheet" href="css/login.css" />
 
-  <!-- Small, header-only polish (scoped) + centering shell -->
   <style>
     :root { --head-h: 64px; }
-
-    .site-head {
-      position: sticky; top: 0; z-index: 50;
-      height: var(--head-h);
-      display: grid; align-items: center;
-      backdrop-filter: saturate(120%) blur(6px);
-      background: color-mix(in oklab, var(--card, #fff), transparent 15%);
-      border-bottom: 1px solid rgba(0,0,0,.05);
-    }
-    .site-head .wrap {
-      display:flex; gap:16px; align-items:center; justify-content:space-between; flex-wrap:wrap;
-    }
-    .brand {
-      display:flex; align-items:center; gap:10px; font-weight:700;
-      text-decoration:none; color:inherit;
-    }
+    .site-head { position: sticky; top: 0; z-index: 50; height: var(--head-h); display: grid; align-items: center; backdrop-filter: saturate(120%) blur(6px); background: color-mix(in oklab, var(--card, #fff), transparent 15%); border-bottom: 1px solid rgba(0,0,0,.05); }
+    .site-head .wrap { display:flex; gap:16px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+    .brand { display:flex; align-items:center; gap:10px; font-weight:700; text-decoration:none; color:inherit; }
     .brand svg { width:22px; height:22px; color:var(--accent, #16a34a) }
     .nav { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
-    .nav a {
-      padding:6px 10px; border-radius:999px; text-decoration:none; color:inherit;
-      border:1px solid transparent;
-    }
-    .nav a[aria-current="page"] {
-      background: color-mix(in oklab, var(--accent, #16a34a), white 85%);
-      border-color: color-mix(in oklab, var(--accent, #16a34a), white 60%);
-    }
-
-    /* Center the login card accounting for header height */
-    .auth-shell {
-      min-height: calc(100svh - var(--head-h));
-      display: grid; place-items: center;
-      padding: 24px;
-    }
-    /* Optional: tighten the card a touch on very large screens */
-    @media (min-width: 1100px){
-      .auth-card { width: 520px; }
-    }
+    .nav a { padding:6px 10px; border-radius:999px; text-decoration:none; color:inherit; border:1px solid transparent; }
+    .nav a[aria-current="page"] { background: color-mix(in oklab, var(--accent, #16a34a), white 85%); border-color: color-mix(in oklab, var(--accent, #16a34a), white 60%); }
+    .auth-shell { min-height: calc(100svh - var(--head-h)); display: grid; place-items: center; padding: 24px; }
+    @media (min-width: 1100px){ .auth-card { width: 520px; } }
   </style>
 
-  <!-- ENV (only needed if you later switch to Supabase Auth here) -->
   <script>
     window.ENV_SUPABASE_URL = 'https://bhqeasmtrdfqncliipki.supabase.co/';
     window.ENV_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJocWVhc210cmRmcW5jbGlpcGtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIwNzQ4NzgsImV4cCI6MjA3NzY1MDg3OH0.249y8yGBYKgcvnoKkdTft94Mu74kbO_Ioso2HFrTFpg';
   </script>
+  
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"
+          onload="
+            try {
+              window.supabase = window.supabase.createClient(
+                window.ENV_SUPABASE_URL,
+                window.ENV_SUPABASE_KEY,
+                { auth:{ persistSession:true, autoRefreshToken:true } }
+              );
+              console.log('[supabase] ready?', !!window.supabase);
+            } catch(e) { console.error('[supabase] init error', e); }
+          "></script>
 
-  <!-- Shared app helpers -->
   <script defer src="js/common.js"></script>
 </head>
 <body class="auth-body">
-  <!-- ===== Sticky Header ===== -->
   <header class="site-head" role="banner">
     <div class="container wrap">
       <a href="recipes.html#browse" class="brand" aria-label="RecipeSite Home">
@@ -79,17 +58,14 @@
     </div>
   </header>
 
-  <!-- ===== Centered Login ===== -->
   <main class="auth-shell">
     <div class="auth-card" role="form" aria-labelledby="loginTitle">
       <div class="auth-brand">
         <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 3a1 1 0 0 0-1 1v2h10a1 1 0 1 1 0 2H7v2h8.5a3.5 3.5 0 1 1 0 7H12v2h4.5a5.5 5.5 0 0 0 0-11H6V4a1 1 0 0 1 1-1h1z"/></svg>
         <span>RecipeSite</span>
       </div>
-
       <h1 id="loginTitle">Sign in</h1>
-      <p class="muted">Use any email to preview. Password is not checked.</p>
-
+      
       <form id="loginForm" class="auth-form" novalidate>
         <label class="field">
           <span>Email</span>
@@ -104,68 +80,41 @@
 
       <div class="auth-footer row" style="justify-content:space-between;">
         <a class="link" href="register.html">Create an account</a>
-        <a class="link" href="#" id="forgotLink">Forgot password?</a>
+        <a class="link" href="reset.html" id="forgotLink">Forgot password?</a>
       </div>
     </div>
   </main>
 
   <script>
-    // Highlight current tab if you ever use this header on other pages
-    Array.from(document.querySelectorAll('.nav a')).forEach(a => {
-      const isHere = a.getAttribute('href') === location.pathname + location.hash;
-      a.setAttribute('aria-current', isHere ? 'page' : 'false');
+    document.addEventListener('DOMContentLoaded', () => {
+
+      // Wait for Supabase to be ready
+      const checkSupabase = setInterval(() => {
+        if (window.supabase) {
+          clearInterval(checkSupabase);
+          
+          // Wire up the REAL login form
+          document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            
+            try {
+              const { error } = await supabase.auth.signInWithPassword({ email, password });
+              if (error) throw error;
+              
+              // Login was successful! Send to recipes page.
+              const next = new URLSearchParams(location.search).get('next') || 'recipes.html#browse';
+              location.href = next;
+
+            } catch (err) {
+              alert('Login failed: ' + err.message);
+            }
+          });
+        }
+      }, 100); // Check every 100ms
+
     });
-
-    // Mock login: save user and redirect back
-    document.getElementById('loginForm').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const email = document.getElementById('email').value.trim();
-      if (!email) { alert('Please enter your email'); return; }
-      // Store a lightweight profile for header UI, etc.
-      const name = email.split('@')[0];
-      RecipeSite.setUser({ name, email });
-      const next = new URLSearchParams(location.search).get('next') || 'recipes.html#browse';
-      location.href = next;
-    });
-
-    // Placeholder forgot-password (wire to Supabase later if you like)
-    document.getElementById('forgotLink').addEventListener('click', (e) => {
-      e.preventDefault();
-      alert('Password reset coming soon. For now, this is a visual placeholder.');
-    });
-
-    // Wait for the document (and common.js) to be ready
-  document.addEventListener('DOMContentLoaded', () => {
-
-    // Highlight current tab (if you ever use this header on other pages)
-    Array.from(document.querySelectorAll('.nav a')).forEach(a => {
-      const isHere = a.getAttribute('href') === location.pathname + location.hash;
-      a.setAttribute('aria-current', isHere ? 'page' : 'false');
-    });
-
-    // Mock login: save user and redirect back
-    document.getElementById('loginForm').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const email = document.getElementById('email').value.trim();
-      if (!email) { alert('Please enter your email'); return; }
-      
-      // This will now work, as RecipeSite is guaranteed to be loaded
-      const name = email.split('@')[0];
-      RecipeSite.setUser({ name, email }); 
-      
-      const next = new URLSearchParams(location.search).get('next') || 'recipes.html#browse';
-      location.href = next;
-    });
-
-    // Placeholder forgot-password
-    document.getElementById('forgotLink').addEventListener('click', (e) => {
-      e.preventDefault();
-      alert('Password reset coming soon. For now, this is a visual placeholder.');
-    });
-    
-  });
-
-    
   </script>
 </body>
 </html>

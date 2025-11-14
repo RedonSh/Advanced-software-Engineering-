@@ -6,11 +6,9 @@ const $$  = (s, c=document)=>c.querySelector(s);
 const onReady = (fn)=>document.readyState!=='loading'
   ? fn() : document.addEventListener('DOMContentLoaded', fn);
 
-/* ---------- Minimal auth + favourites + pantry (local only) ---------- */
-const getUser = () => { try { return JSON.parse(localStorage.getItem('recipe_user')||'null'); } catch { return null; } };
-const setUser = (u) => localStorage.setItem('recipe_user', JSON.stringify(u||null));
-const logout  = () => setUser(null);
-const requireLogin = () => !!getUser();
+/* ---------- Favourites + Pantry (local only) ---------- */
+function getFavSet(){ const raw = localStorage.getItem('fav_recipes')||'[]'; return new Set(JSON.parse(raw)); }
+// ... (rest of the file is unchanged) ...
 
 function getFavSet(){ const raw = localStorage.getItem('fav_recipes')||'[]'; return new Set(JSON.parse(raw)); }
 function saveFavSet(set){ localStorage.setItem('fav_recipes', JSON.stringify([...set])); }
