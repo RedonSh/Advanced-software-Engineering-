@@ -133,6 +133,39 @@
       e.preventDefault();
       alert('Password reset coming soon. For now, this is a visual placeholder.');
     });
+
+    // Wait for the document (and common.js) to be ready
+  document.addEventListener('DOMContentLoaded', () => {
+
+    // Highlight current tab (if you ever use this header on other pages)
+    Array.from(document.querySelectorAll('.nav a')).forEach(a => {
+      const isHere = a.getAttribute('href') === location.pathname + location.hash;
+      a.setAttribute('aria-current', isHere ? 'page' : 'false');
+    });
+
+    // Mock login: save user and redirect back
+    document.getElementById('loginForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      if (!email) { alert('Please enter your email'); return; }
+      
+      // This will now work, as RecipeSite is guaranteed to be loaded
+      const name = email.split('@')[0];
+      RecipeSite.setUser({ name, email }); 
+      
+      const next = new URLSearchParams(location.search).get('next') || 'recipes.html#browse';
+      location.href = next;
+    });
+
+    // Placeholder forgot-password
+    document.getElementById('forgotLink').addEventListener('click', (e) => {
+      e.preventDefault();
+      alert('Password reset coming soon. For now, this is a visual placeholder.');
+    });
+    
+  });
+
+    
   </script>
 </body>
 </html>

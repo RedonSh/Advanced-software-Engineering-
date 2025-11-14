@@ -129,10 +129,35 @@
   </main>
 
   <script>
-  (() => {
+  // Wait for the document (and common.js) to be ready
+  document.addEventListener('DOMContentLoaded', () => {
+
     const alertBox = document.getElementById('alert');
     const showAlert = (msg) => { alertBox.textContent = msg; alertBox.hidden = false; };
     const hideAlert = () => { alertBox.hidden = true; alertBox.textContent = ''; };
+
+    /* ===== Header Auth UI (This is the new part) ===== */
+    (function updateHeaderAuth() {
+      const authContainer = document.querySelector('header .auth');
+      if (!authContainer) return;
+
+      const user = RecipeSite.getUser(); // This will work now
+
+      if (user && user.email) {
+        // User is logged in
+        authContainer.innerHTML = `
+          <span style="font-size: 0.9rem; margin-right: 12px;">Hi, ${user.name || user.email.split('@')[0]}</span>
+          <button class="btn small outline" id="logoutButton">Logout</button>
+        `;
+        authContainer.querySelector('#logoutButton').addEventListener('click', () => {
+          RecipeSite.logout();
+          location.href = 'index.html';
+        });
+      } else {
+        // User is not logged in
+        authContainer.innerHTML = '<a class="btn small" href="index.html">Login</a>';
+      }
+    })();
 
     /* Router */
     const sections = [...document.querySelectorAll('section.route')];
@@ -256,8 +281,9 @@
         grid.innerHTML = '';
       }
     }
-    if (document.readyState!=='loading') bootBrowse();
-    else document.addEventListener('DOMContentLoaded', bootBrowse);
+    
+    // This line is now safe because we are inside the DOMContentLoaded listener
+    bootBrowse();
 
     /* ===== Generator ===== */
     let genBooted=false;
@@ -373,7 +399,7 @@
         });
       }catch(e){ showAlert('Favourites: '+e.message); grid.innerHTML=''; }
     }
-  })();
-  </script>
+  }); // <-- End of the DOMContentLoaded wrapper
+</script>
 </body>
 </html>
