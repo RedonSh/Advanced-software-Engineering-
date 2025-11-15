@@ -8,7 +8,25 @@
   <link rel="stylesheet" href="css/base.css" />
   <link rel="stylesheet" href="css/recipes.css" />
 
-  <!-- Tiny header polish -->
+  <script>
+    window.ENV_SUPABASE_URL = 'https://bhqeasmtrdfqncliipki.supabase.co/';
+    window.ENV_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJocWVhc210cmRmcW5jbGlpcGtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIwNzQ4NzgsImV4cCI6MjA3NzY1MDg3OH0.249y8yGBYKgcvnoKkdTft94Mu74kbO_Ioso2HFrTFpg';
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"
+          onload="
+            try {
+              window.supabase = window.supabase.createClient(
+                window.ENV_SUPABASE_URL,
+                window.ENV_SUPABASE_KEY,
+                { auth:{ persistSession:true, autoRefreshToken:true } }
+              );
+              console.log('[supabase] ready?', !!window.supabase);
+            } catch(e) { console.error('[supabase] init error', e); }
+          "></script>
+  
+  <script defer src="js/common.js"></script>
+
   <style>
     .site-head{position:sticky;top:0;z-index:50;backdrop-filter:saturate(120%) blur(6px);
       background:color-mix(in oklab,var(--card,#fff),transparent 15%);border-bottom:1px solid #0001}
@@ -26,200 +44,97 @@
   <script>
   document.addEventListener('DOMContentLoaded', () => {
 
-    const alertBox = document.getElementById('alert');
-    const showAlert = (msg) => { alertBox.textContent = msg; alertBox.hidden = false; };
-    const hideAlert = () => { alertBox.hidden = true; alertBox.textContent = ''; };
-    
-    // This variable will track if our app has already been started
-    let appBooted = false;
-
-    /* ===== ✅ 1. REAL AUTH HANDLER ===== */
-    supabase.auth.onAuthStateChange((event, session) => {
-      const authContainer = document.querySelector('header .auth');
-      if (!authContainer) return;
-
-      if (event === 'SIGNED_OUT' || !session) {
-        // User is logged out
-        appBooted = false; // Reset app state
-        location.href = 'index.html'; // Send to login page
-        
-      } else if (session && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
-        // User is logged in
-        const user = session.user;
-        const displayName = user.user_metadata?.username || user.email.split('@')[0];
-        
-        authContainer.innerHTML = `
-          <span style="font-size: 0.9rem; margin-right: 12px;">Hi, ${displayName}</span>
-          <button class="btn small outline" id="logoutButton">Logout</button>
-        `;
-        
-        authContainer.querySelector('#logoutButton').addEventListener('click', async () => {
-          await supabase.auth.signOut();
-          // Page will redirect automatically when 'SIGNED_OUT' event fires
-        });
-
-        // ✅ 2. BOOT THE APP
-        // Only boot the app if it hasn't been booted already
-        if (!appBooted) {
-          appBooted = true;
-          bootApp(); 
-        }
-      }
-    });
-
-    /**
-     * ✅ 3. NEW FUNCTION TO CONTAIN THE APP
-     * This function now holds all the code that sets up your page.
-     * It will only be called AFTER a user is confirmed.
-     */
-    function bootApp() {
-      /* Router */
-      const sections = [...document.querySelectorAll('section.route')];
-      const tabs = [...document.querySelectorAll('header .nav a')];
-      function setActive(hash){
-        const route = (hash||'#browse').replace('#','');
-        sections.forEach(s => s.hidden = s.dataset.route !== route);
-        tabs.forEach(a => a.setAttribute('aria-current', a.getAttribute('href') === '#'+route ? 'page':'false'));
-        if (route==='favourites') renderFavourites();
-        if (route==='generator')  bootGenerator();
-        if (route==='pantry')     bootPantry();
-      }
-      window.addEventListener('hashchange', ()=>setActive(location.hash));
-      if (!location.hash) location.hash = '#browse';
-      setActive(location.hash);
-
-      /* ===== Browse ===== */
-      const state = { all: [], filtered: [], page:1, pageSize:12 };
-      const grid = document.getElementById('browseGrid');
-      const qInput = document.getElementById('searchInput');
-      const catSelect = document.getElementById('categorySelect');
-      const sortSelect = document.getElementById('sortSelect');
-      const prevBtn = document.getElementById('pagePrev');
-      const nextBtn = document.getElementById('pageNext');
-      const globalSearch = document.getElementById('globalSearch');
-
-      const debounce = (fn,ms)=>{let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};};
-      const normalize = s => (s||'').toString().toLowerCase();
-
-      function cardHTML(r){
-        const to = `recipe-detail.html?id=${encodeURIComponent(r.id)}`;
-        const imgHtml = r.image ? `
-          <a class="thumb-link" href="${to}">
-            <img class="thumb" src="${r.image}" alt="${r.title}" loading="lazy" />
-          </a>` : `<div class="noimg-badge">No image</div>`;
-        return `
-          <article class="card link-card">
-            ${imgHtml}
-            <div class="row">
-              <h2 class="card-title"><a class="title-link" href="${to}">${r.title}</a></h2>
-              <button class="btn small" type="button" data-fav="${r.id}">☆ Save</button>
-            </div>
-            <div class="pill cat">${r.category || ''}</div>
-            <p class="muted">Ingredients: ${(r.ingredients||[]).slice(0,4).join(', ')}...</p>
-            <div class="row"><a class="btn small outline" href="${to}">View details</a></div>
-          </article>`;
-      }
-
-      function renderGrid(items){
-        if (!items.length) { grid.innerHTML = '<p class="muted">No recipes found.</p>'; return; }
-        grid.innerHTML = items.map(cardHTML).join('');
-        grid.querySelectorAll('[data-fav]').forEach(btn=>{
-          btn.addEventListener('click', async (e)=>{
-            e.preventDefault();
-            const id = btn.getAttribute('data-fav');
-            const s = await RecipeSite.toggleFav(id);
-            btn.textContent = s ? '✓ Saved' : '☆ Save';
-          });
-        });
-      }
-
-      function sortList(list){
-        const mode = sortSelect.value || 'recent';
-        const copy = list.slice();
-        if (mode==='alpha') copy.sort((a,b)=>a.title.localeCompare(b.title));
-        return copy;
-      }
-
-      function applyFilters(){
-        const q = normalize(qInput.value);
-        const cat = catSelect.value || 'All';
-        let list = state.all;
-        if (cat!=='All') list = list.filter(r => (r.category||'').toLowerCase() === cat.toLowerCase());
-        if (q) list = list.filter(r => {
-          const hay = [r.title, r.category, ...(r.ingredients||[])].join(' ').toLowerCase();
-          return hay.includes(q);
-        });
-        state.filtered = sortList(list);
-        state.page = 1;
-        paginate();
-      }
-
-      function paginate(){
-        const start = (state.page-1)*state.pageSize;
-        const slice = state.filtered.slice(start, start+state.pageSize);
-        renderGrid(slice);
-        prevBtn.disabled = state.page<=1;
-        nextBtn.disabled = start + state.pageSize >= state.filtered.length;
-      }
-
-      async function bootBrowse(){
-        try{
-          hideAlert();
-          // categories
-          const cats = await RecipeSite.listCategories();
-          catSelect.innerHTML = '<option>All</option>' + (cats||[]).map(c=>`<option>${c}</option>`).join('');
-          catSelect.value = 'All';
-
-          // data
-          const all = await RecipeSite.listRecipes();
-          if (!Array.isArray(all)) throw new Error('Unexpected response from DB.');
-          if (!all.length) showAlert('No recipes returned from the database. Check data, RLS policy, and ENV keys.');
-          state.all = all;
-          state.filtered = all;
-
-          // wire inputs
-          qInput.addEventListener('input', debounce(applyFilters,150));
-          catSelect.addEventListener('change', applyFilters);
-          sortSelect.addEventListener('change', applyFilters);
-          prevBtn.addEventListener('click', ()=>{state.page--; paginate();});
-          nextBtn.addEventListener('click', ()=>{state.page++; paginate();});
-          globalSearch.addEventListener('input', debounce(()=>{
-            qInput.value = globalSearch.value;
-            if (location.hash!=='#browse') location.hash='#browse';
-            applyFilters();
-          },150));
-
-          applyFilters();
-        }catch(err){
-          showAlert(err.message || String(err));
-          grid.innerHTML = '';
-        }
-      }
+    // This function holds all your page logic
+    function startAppLogic() {
+      const alertBox = document.getElementById('alert');
+      const showAlert = (msg) => { alertBox.textContent = msg; alertBox.hidden = false; };
+      const hideAlert = () => { alertBox.hidden = true; alertBox.textContent = ''; };
       
-      // This is now safely called from within bootApp()
-      bootBrowse();
+      let appBooted = false;
 
-      /* ===== Generator ===== */
-      let genBooted=false;
-      async function bootGenerator(){
-        if (genBooted) return; genBooted=true;
-        const genCat = document.getElementById('genCategory');
-        const genKey = document.getElementById('genKey');
-        const genBtn = document.getElementById('genBtn');
-        const surprise = document.getElementById('surpriseBtn');
-        const genGrid = document.getElementById('genGrid');
-        const genCount = document.getElementById('genCount');
+      /* ===== 1. REAL AUTH HANDLER ===== */
+      // This is now safe because we know window.supabase exists
+      supabase.auth.onAuthStateChange((event, session) => {
+        const authContainer = document.querySelector('header .auth');
+        if (!authContainer) return;
 
-        try{
-          const cats = await RecipeSite.listCategories();
-          genCat.innerHTML = '<option>All</option>' + (cats||[]).map(c=>`<option>${c}</option>`).join('');
-          genCat.value = 'All';
-        }catch(e){ showAlert('Generator: '+e.message); }
+        if (event === 'SIGNED_OUT' || !session) {
+          appBooted = false;
+          location.href = 'index.html';
+          
+        } else if (session && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
+          const user = session.user;
+          const displayName = user.user_metadata?.username || user.email.split('@')[0];
+          
+          authContainer.innerHTML = `
+            <span style="font-size: 0.9rem; margin-right: 12px;">Hi, ${displayName}</span>
+            <button class="btn small outline" id="logoutButton">Logout</button>
+          `;
+          
+          authContainer.querySelector('#logoutButton').addEventListener('click', async () => {
+            await supabase.auth.signOut();
+          });
 
-        function render(list){
-          genGrid.innerHTML = list.map(cardHTML).join('') || '<p class="muted">No matches.</p>';
-          genCount.textContent = `${list.length} result${list.length===1?'':'s'}`;
-          genGrid.querySelectorAll('[data-fav]').forEach(btn=>{
+          if (!appBooted) {
+            appBooted = true;
+            bootApp(); 
+          }
+        }
+      });
+
+      /* ===== 2. APP BOOT FUNCTION ===== */
+      function bootApp() {
+        /* Router */
+        const sections = [...document.querySelectorAll('section.route')];
+        const tabs = [...document.querySelectorAll('header .nav a')];
+        function setActive(hash){
+          const route = (hash||'#browse').replace('#','');
+          sections.forEach(s => s.hidden = s.dataset.route !== route);
+          tabs.forEach(a => a.setAttribute('aria-current', a.getAttribute('href') === '#'+route ? 'page':'false'));
+          if (route==='favourites') renderFavourites();
+          if (route==='generator')  bootGenerator();
+          if (route==='pantry')     bootPantry();
+        }
+        window.addEventListener('hashchange', ()=>setActive(location.hash));
+        if (!location.hash) location.hash = '#browse';
+        setActive(location.hash);
+
+        /* ===== Browse ===== */
+        const state = { all: [], filtered: [], page:1, pageSize:12 };
+        const grid = document.getElementById('browseGrid');
+        const qInput = document.getElementById('searchInput');
+        const catSelect = document.getElementById('categorySelect');
+        const sortSelect = document.getElementById('sortSelect');
+        const prevBtn = document.getElementById('pagePrev');
+        const nextBtn = document.getElementById('pageNext');
+        const globalSearch = document.getElementById('globalSearch');
+
+        const debounce = (fn,ms)=>{let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};};
+        const normalize = s => (s||'').toString().toLowerCase();
+
+        function cardHTML(r){
+          const to = `recipe-detail.html?id=${encodeURIComponent(r.id)}`;
+          const imgHtml = r.image ? `
+            <a class="thumb-link" href="${to}">
+              <img class="thumb" src="${r.image}" alt="${r.title}" loading="lazy" />
+            </a>` : `<div class="noimg-badge">No image</div>`;
+          return `
+            <article class="card link-card">
+              ${imgHtml}
+              <div class="row">
+                <h2 class="card-title"><a class="title-link" href="${to}">${r.title}</a></h2>
+                <button class="btn small" type="button" data-fav="${r.id}">☆ Save</button>
+              </div>
+              <div class="pill cat">${r.category || ''}</div>
+              <p class="muted">Ingredients: ${(r.ingredients||[]).slice(0,4).join(', ')}...</p>
+              <div class="row"><a class="btn small outline" href="${to}">View details</a></div>
+            </article>`;
+        }
+
+        function renderGrid(items){
+          if (!items.length) { grid.innerHTML = '<p class="muted">No recipes found.</p>'; return; }
+          grid.innerHTML = items.map(cardHTML).join('');
+          grid.querySelectorAll('[data-fav]').forEach(btn=>{
             btn.addEventListener('click', async (e)=>{
               e.preventDefault();
               const id = btn.getAttribute('data-fav');
@@ -228,96 +143,307 @@
             });
           });
         }
-        async function generate(n=9){
+
+        function sortList(list){
+          const mode = sortSelect.value || 'recent';
+          const copy = list.slice();
+          if (mode==='alpha') copy.sort((a,b)=>a.title.localeCompare(b.title));
+          return copy;
+        }
+
+        function applyFilters(){
+          const q = normalize(qInput.value);
+          const cat = catSelect.value || 'All';
+          let list = state.all;
+          if (cat!=='All') list = list.filter(r => (r.category||'').toLowerCase() === cat.toLowerCase());
+          if (q) list = list.filter(r => {
+            const hay = [r.title, r.category, ...(r.ingredients||[])].join(' ').toLowerCase();
+            return hay.includes(q);
+          });
+          state.filtered = sortList(list);
+          state.page = 1;
+          paginate();
+        }
+
+        function paginate(){
+          const start = (state.page-1)*state.pageSize;
+          const slice = state.filtered.slice(start, start+state.pageSize);
+          renderGrid(slice);
+          prevBtn.disabled = state.page<=1;
+          nextBtn.disabled = start + state.pageSize >= state.filtered.length;
+        }
+
+        async function bootBrowse(){
           try{
+            hideAlert();
+            const cats = await RecipeSite.listCategories();
+            catSelect.innerHTML = '<option>All</option>' + (cats||[]).map(c=>`<option>${c}</option>`).join('');
+            catSelect.value = 'All';
+
             const all = await RecipeSite.listRecipes();
-            let list = all;
-            const cat = genCat.value||'All';
-            const key = (genKey.value||'').trim().toLowerCase();
-            if (cat!=='All') list = list.filter(r => (r.category||'').toLowerCase()===cat.toLowerCase());
-            if (key) list = list.filter(r => (r.ingredients||[]).join(' ').toLowerCase().includes(key));
-            list = list.sort(()=>Math.random()-0.5).slice(0,n);
-            render(list);
+            if (!Array.isArray(all)) throw new Error('Unexpected response from DB.');
+            if (!all.length) showAlert('No recipes returned from the database. Check data, RLS policy, and ENV keys.');
+            state.all = all;
+            state.filtered = all;
+
+            qInput.addEventListener('input', debounce(applyFilters,150));
+            catSelect.addEventListener('change', applyFilters);
+            sortSelect.addEventListener('change', applyFilters);
+            prevBtn.addEventListener('click', ()=>{state.page--; paginate();});
+            nextBtn.addEventListener('click', ()=>{state.page++; paginate();});
+            globalSearch.addEventListener('input', debounce(()=>{
+              qInput.value = globalSearch.value;
+              if (location.hash!=='#browse') location.hash='#browse';
+              applyFilters();
+            },150));
+
+            applyFilters();
+          }catch(err){
+            showAlert(err.message || String(err));
+            grid.innerHTML = '';
+          }
+        }
+        
+        bootBrowse();
+
+        /* ===== Generator ===== */
+        let genBooted=false;
+        async function bootGenerator(){
+          if (genBooted) return; genBooted=true;
+          const genCat = document.getElementById('genCategory');
+          const genKey = document.getElementById('genKey');
+          const genBtn = document.getElementById('genBtn');
+          const surprise = document.getElementById('surpriseBtn');
+          const genGrid = document.getElementById('genGrid');
+          const genCount = document.getElementById('genCount');
+
+          try{
+            const cats = await RecipeSite.listCategories();
+            genCat.innerHTML = '<option>All</option>' + (cats||[]).map(c=>`<option>${c}</option>`).join('');
+            genCat.value = 'All';
           }catch(e){ showAlert('Generator: '+e.message); }
-        }
-        genBtn.addEventListener('click', ()=>generate(9));
-        surprise.addEventListener('click', ()=>generate(3));
-        generate(9);
-      }
 
-      /* ===== Pantry ===== */
-      let pantryBooted=false;
-      // ✅✅✅ THIS IS THE CORRECTED FUNCTION ✅✅✅
-      function bootPantry(){
-        if (pantryBooted) return; pantryBooted=true;
-        const listEl=document.getElementById('pantryList');
-        const nameEl=document.getElementById('pantryName');
-        const qtyEl=document.getElementById('pantryQty');
-        const expEl=document.getElementById('pantryExpiry');
-        const addBtn=document.getElementById('addPantryBtn');
-        let editIndex=null;
-
-        function render(){
-          const items=RecipeSite.pantryList();
-          listEl.innerHTML='';
-          if(!items.length){ listEl.innerHTML='<p class="muted">Your pantry is empty.</p>'; return; }
-          items.forEach((it,idx)=>{
-            const card=document.createElement('article'); card.className='card';
-            card.innerHTML=`
-              <div class="row">
-                <h3 style="margin:0">${it.name}</h3>
-                <div class="row" style="gap:6px;margin-left:auto">
-                  <button class="btn small outline" data-edit="${idx}">Edit</button>
-                  <button class="btn small outline" data-del="${idx}">Remove</button>
-                </div>
-              </div>
-              <p>Quantity: ${it.quantity}</p>
-              <p>Expiry: ${it.expiry || 'N/A'}</p>`;
-            card.querySelector('[data-del]').onclick=()=>{
-              const items=RecipeSite.pantryList(); items.splice(idx,1);
-              localStorage.setItem('pantry', JSON.stringify(items)); render(); reset();
-            };
-            card.querySelector('[data-edit]').onclick=()=>{
-              nameEl.value=it.name; qtyEl.value=it.quantity; expEl.value=it.expiry||'';
-              editIndex=idx; addBtn.textContent='Save Changes';
-            };
-            listEl.appendChild(card);
-          });
-        }
-        function reset(){ nameEl.value=''; qtyEl.value=''; expEl.value=''; editIndex=null; addBtn.textContent='Add Ingredient'; }
-        addBtn.addEventListener('click', ()=>{
-          const name=nameEl.value.trim(), quantity=qtyEl.value.trim(), expiry=expEl.value;
-          if(!name||!quantity){ alert('Please enter ingredient name and quantity.'); return; }
-          const items=RecipeSite.pantryList();
-          if(editIndex!==null) items[editIndex]={name,quantity,expiry}; else items.push({name,quantity,expiry});
-          localStorage.setItem('pantry', JSON.stringify(items)); render(); reset();
-        });
-        render();
-      }
-
-      /* ===== Favourites ===== */
-      async function renderFavourites(){
-        const grid=document.getElementById('favGrid'); grid.innerHTML='<p class="muted">Loading…</p>';
-        try{
-          const ids=[...RecipeSite.getFavSet()];
-          const all=await RecipeSite.listRecipes();
-          const favs=all.filter(r=>ids.includes(r.id));
-          if(!favs.length){ grid.innerHTML='<p class="muted">No favourites yet.</p>'; return; }
-          grid.innerHTML=favs.map(cardHTML).join('');
-          grid.querySelectorAll('[data-unfav],[data-fav]').forEach(btn=>{
-            const id = btn.getAttribute('data-unfav') || btn.getAttribute('data-fav');
-            btn.addEventListener('click', async ()=>{
-              await RecipeSite.toggleFav(id);
-              btn.closest('.card').remove();
-              if(!grid.children.length) grid.innerHTML='<p class="muted">No favourites.</p>';
+          function render(list){
+            genGrid.innerHTML = list.map(cardHTML).join('') || '<p class="muted">No matches.</p>';
+            genCount.textContent = `${list.length} result${list.length===1?'':'s'}`;
+            genGrid.querySelectorAll('[data-fav]').forEach(btn=>{
+              btn.addEventListener('click', async (e)=>{
+                e.preventDefault();
+                const id = btn.getAttribute('data-fav');
+                const s = await RecipeSite.toggleFav(id);
+                btn.textContent = s ? '✓ Saved' : '☆ Save';
+              });
             });
+          }
+          async function generate(n=9){
+            try{
+              const all = await RecipeSite.listRecipes();
+              let list = all;
+              const cat = genCat.value||'All';
+              const key = (genKey.value||'').trim().toLowerCase();
+              if (cat!=='All') list = list.filter(r => (r.category||'').toLowerCase()===cat.toLowerCase());
+              if (key) list = list.filter(r => (r.ingredients||[]).join(' ').toLowerCase().includes(key));
+              list = list.sort(()=>Math.random()-0.5).slice(0,n);
+              render(list);
+            }catch(e){ showAlert('Generator: '+e.message); }
+          }
+          genBtn.addEventListener('click', ()=>generate(9));
+          surprise.addEventListener('click', ()=>generate(3));
+          generate(9);
+        }
+
+        /* ===== Pantry ===== */
+        let pantryBooted=false;
+        function bootPantry(){
+          if (pantryBooted) return; pantryBooted=true;
+          const listEl=document.getElementById('pantryList');
+          const nameEl=document.getElementById('pantryName');
+          const qtyEl=document.getElementById('pantryQty');
+          const expEl=document.getElementById('pantryExpiry');
+          const addBtn=document.getElementById('addPantryBtn');
+          let editIndex=null;
+
+          function render(){
+            const items=RecipeSite.pantryList();
+            listEl.innerHTML='';
+            if(!items.length){ listEl.innerHTML='<p class="muted">Your pantry is empty.</p>'; return; }
+            items.forEach((it,idx)=>{
+              const card=document.createElement('article'); card.className='card';
+              card.innerHTML=`
+                <div class="row">
+                  <h3 style="margin:0">${it.name}</h3>
+                  <div class="row" style="gap:6px;margin-left:auto">
+                    <button class="btn small outline" data-edit="${idx}">Edit</button>
+                    <button class="btn small outline" data-del="${idx}">Remove</button>
+                  </div>
+                </div>
+                <p>Quantity: ${it.quantity}</p>
+                <p>Expiry: ${it.expiry || 'N/A'}</p>`;
+              card.querySelector('[data-del]').onclick=()=>{
+                const items=RecipeSite.pantryList(); items.splice(idx,1);
+                localStorage.setItem('pantry', JSON.stringify(items)); render(); reset();
+              };
+              card.querySelector('[data-edit]').onclick=()=>{
+                nameEl.value=it.name; qtyEl.value=it.quantity; expEl.value=it.expiry||'';
+                editIndex=idx; addBtn.textContent='Save Changes';
+              };
+              listEl.appendChild(card);
+            });
+          }
+          function reset(){ nameEl.value=''; qtyEl.value=''; expEl.value=''; editIndex=null; addBtn.textContent='Add Ingredient'; }
+          addBtn.addEventListener('click', ()=>{
+            const name=nameEl.value.trim(), quantity=qtyEl.value.trim(), expiry=expEl.value;
+            if(!name||!quantity){ alert('Please enter ingredient name and quantity.'); return; }
+            const items=RecipeSite.pantryList();
+            if(editIndex!==null) items[editIndex]={name,quantity,expiry}; else items.push({name,quantity,expiry});
+            localStorage.setItem('pantry', JSON.stringify(items)); render(); reset();
           });
-        }catch(e){ showAlert('Favourites: '+e.message); grid.innerHTML=''; }
+          render();
+        }
+
+        /* ===== Favourites ===== */
+        async function renderFavourites(){
+          const grid=document.getElementById('favGrid'); grid.innerHTML='<p class="muted">Loading…</p>';
+          try{
+            const ids=[...RecipeSite.getFavSet()];
+            const all=await RecipeSite.listRecipes();
+            const favs=all.filter(r=>ids.includes(r.id));
+            if(!favs.length){ grid.innerHTML='<p class="muted">No favourites yet.</p>'; return; }
+            grid.innerHTML=favs.map(cardHTML).join('');
+            grid.querySelectorAll('[data-unfav],[data-fav]').forEach(btn=>{
+              const id = btn.getAttribute('data-unfav') || btn.getAttribute('data-fav');
+              btn.addEventListener('click', async ()=>{
+                await RecipeSite.toggleFav(id);
+                btn.closest('.card').remove();
+                if(!grid.children.length) grid.innerHTML='<p class="muted">No favourites.</p>';
+              });
+            });
+          }catch(e){ showAlert('Favourites: '+e.message); grid.innerHTML=''; }
+        }
+      } // <-- End of bootApp() function
+      
+    } // <-- End of startAppLogic() function
+
+
+    // Wait for Supabase to be ready
+    const checkSupabase = setInterval(() => {
+      if (window.supabase) {
+        clearInterval(checkSupabase);
+        startAppLogic(); // <-- Run all the code
       }
-    } // <-- End of bootApp() function
-  }); // <-- End of the DOMContentLoaded wrapper
+    }, 100); // Check every 100ms
+    
+  });
 </script>
 
+</head>
+<body>
+
+  <header class="site-head">
+    <div class="container wrap">
+      <a href="recipes.html#browse" class="brand">
+        <svg viewBox="0 0 24 24" fill="currentColor" style="width:22px;height:22px;" aria-hidden="true">
+          <path d="M8 3a1 1 0 0 0-1 1v2h10a1 1 0 1 1 0 2H7v2h8.5a3.5 3.5 0 1 1 0 7H12v2h4.5a5.5 5.5 0 0 0 0-11H6V4a1 1 0 0 1 1-1h1z"/>
+        </svg>
+        <span>RecipeSite</span>
+      </a>
+      
+      <nav class="nav">
+        <a href="#browse" aria-current="page">Browse</a>
+        <a href="#generator">Generator</a>
+        <a href="#pantry">Pantry</a>
+        <a href="#favourites">Favourites</a>
+      </nav>
+      
+      <div class="head-search">
+        <input id="globalSearch" type="search" placeholder="Search all recipes..." />
+      </div>
+      
+      <div class="auth" style="min-width: 120px; text-align: right;">
+        </div>
+    </div>
+  </header>
+
+  <main class="container" style="padding-top: 24px; padding-bottom: 24px;">
+    
+    <div id="alert" class="alert" hidden></div>
+
+    <section class="route" data-route="browse">
+      <h1>Discover Recipes</h1>
+      <div class="filters card" style="display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
+        <label class="field" style="flex: 1 1 200px;">
+          <span>Search</span>
+          <input id="searchInput" type="search" placeholder="e.g. Chicken" />
+        </label>
+        <label class="field" style="flex: 1 1 150px;">
+          <span>Category</span>
+          <select id="categorySelect"><option>Loading...</option></select>
+        </label>
+        <label class="field" style="flex: 1 1 150px;">
+          <span>Sort</span>
+          <select id="sortSelect">
+            <option value="recent">Recent</option>
+            <option value="alpha">A-Z</option>
+          </select>
+        </label>
+      </div>
+      
+      <div id="browseGrid" class="recipe-grid">
+        <p class="muted">Loading recipes...</p>
+      </div>
+      
+      <nav class="pagination" style="display: flex; justify-content: center; gap: 12px; margin-top: 24px;">
+        <button id="pagePrev" class="btn outline" disabled>← Previous</button>
+        <button id="pageNext" class="btn outline" disabled>Next →</button>
+      </nav>
+    </section>
+
+    <section class="route" data-route="generator" hidden>
+      <h1>Recipe Generator</h1>
+      <div class="card" style="margin-bottom: 24px;">
+        <div class="row" style="gap: 16px; align-items: flex-end;">
+          <label class="field" style="flex: 1;">
+            <span>Category</span>
+            <select id="genCategory"><option>All</option></select>
+          </label>
+          <label class="field" style="flex: 1;">
+            <span>Key Ingredient</span>
+            <input id="genKey" type="text" placeholder="e.g. Tomato" />
+          </label>
+          <button id="genBtn" class="btn">Generate</button>
+          <button id="surpriseBtn" class="btn outline">Surprise Me (3)</button>
+        </div>
+      </div>
+      <h3><span id="genCount">0 results</span></h3>
+      <div id="genGrid" class="recipe-grid"></div>
+    </section>
+
+    <section class="route" data-route="pantry" hidden>
+      <h1>My Pantry</h1>
+      <div class="pantry-layout" style="display: grid; grid-template-columns: 300px 1fr; gap: 24px;">
+        <aside class="card">
+          <h3>Add to Pantry</h3>
+          <form id="pantryForm">
+            <label class="field"><span>Name</span><input id="pantryName" type="text" required /></label>
+            <label class="field"><span>Quantity</span><input id="pantryQty" type="text" required /></label>
+            <label class="field"><span>Expiry</span><input id="pantryExpiry" type="date" /></label>
+            <button id="addPantryBtn" class="btn full" type="button">Add Ingredient</button>
+          </form>
+        </aside>
+        <div id="pantryList" style="display: flex; flex-direction: column; gap: 16px;">
+          <p class="muted">Your pantry is empty.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="route" data-route="favourites" hidden>
+      <h1>My Favourites</h1>
+      <div id="favGrid" class="recipe-grid">
+        <p class="muted">Loading favourites...</p>
+      </div>
+    </section>
+
+  </main>
   
 </body>
 </html>

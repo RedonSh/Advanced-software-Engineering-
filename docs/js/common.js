@@ -8,9 +8,6 @@ const onReady = (fn)=>document.readyState!=='loading'
 
 /* ---------- Favourites + Pantry (local only) ---------- */
 function getFavSet(){ const raw = localStorage.getItem('fav_recipes')||'[]'; return new Set(JSON.parse(raw)); }
-// ... (rest of the file is unchanged) ...
-
-function getFavSet(){ const raw = localStorage.getItem('fav_recipes')||'[]'; return new Set(JSON.parse(raw)); }
 function saveFavSet(set){ localStorage.setItem('fav_recipes', JSON.stringify([...set])); }
 async function toggleFav(id){ const s=getFavSet(); s.has(id)?s.delete(id):s.add(id); saveFavSet(s); return s.has(id); }
 
@@ -59,8 +56,6 @@ async function dbListCategories() {
 
 /* ---------- Expose (no fallbacks) ---------- */
 window.RecipeSite = {
-  // auth
-  getUser, setUser, logout, requireLogin,
   // favourites
   getFavSet, toggleFav,
   // pantry
