@@ -44,7 +44,6 @@
   <script>
   document.addEventListener('DOMContentLoaded', () => {
 
-    // This function holds all your page logic
     function startAppLogic() {
       const alertBox = document.getElementById('alert');
       const showAlert = (msg) => { alertBox.textContent = msg; alertBox.hidden = false; };
@@ -52,37 +51,47 @@
       
       let appBooted = false;
 
-      /* ===== 1. REAL AUTH HANDLER ===== */
-      // This is now safe because we know window.supabase exists
-      supabase.auth.onAuthStateChange((event, session) => {
+      /* ===== AUTH / HEADER UI (BUT NO HARD GATE) ===== */
+      function updateAuthUI(session) {
         const authContainer = document.querySelector('header .auth');
         if (!authContainer) return;
 
-        if (event === 'SIGNED_OUT' || !session) {
-          appBooted = false;
-          location.href = 'index.html';
-          
-        } else if (session && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
+        if (!session) {
+          // Guest mode: show "Sign in" link, but DO NOT redirect.
+          const next = encodeURIComponent('recipes.html' + location.search + location.hash);
+          authContainer.innerHTML = `
+            <a class="btn small outline" href="index.html?next=${next}">Sign in</a>
+          `;
+        } else {
           const user = session.user;
           const displayName = user.user_metadata?.username || user.email.split('@')[0];
-          
           authContainer.innerHTML = `
             <span style="font-size: 0.9rem; margin-right: 12px;">Hi, ${displayName}</span>
             <button class="btn small outline" id="logoutButton">Logout</button>
           `;
-          
           authContainer.querySelector('#logoutButton').addEventListener('click', async () => {
             await supabase.auth.signOut();
           });
-
-          if (!appBooted) {
-            appBooted = true;
-            bootApp(); 
-          }
         }
+
+        if (!appBooted) {
+          appBooted = true;
+          bootApp();
+        }
+      }
+
+      // Listen for auth changes, but never kick guests out
+      supabase.auth.onAuthStateChange((_event, session) => {
+        updateAuthUI(session);
       });
 
-      /* ===== 2. APP BOOT FUNCTION ===== */
+      // Also grab initial session explicitly (in case)
+      (async () => {
+        const { data } = await supabase.auth.getSession();
+        updateAuthUI(data.session || null);
+      })();
+
+      /* =====  APP BOOT FUNCTION  ===== */
       function bootApp() {
         /* Router */
         const sections = [...document.querySelectorAll('section.route')];
@@ -320,21 +329,19 @@
             });
           }catch(e){ showAlert('Favourites: '+e.message); grid.innerHTML=''; }
         }
-      } // <-- End of bootApp() function
-      
-    } // <-- End of startAppLogic() function
+      } // end bootApp
+    } // end startAppLogic
 
-
-    // Wait for Supabase to be ready
+    // Wait for Supabase to be ready, then start
     const checkSupabase = setInterval(() => {
       if (window.supabase) {
         clearInterval(checkSupabase);
-        startAppLogic(); // <-- Run all the code
+        startAppLogic();
       }
-    }, 100); // Check every 100ms
+    }, 100);
     
   });
-</script>
+  </script>
 
 </head>
 <body>
@@ -360,7 +367,8 @@
       </div>
       
       <div class="auth" style="min-width: 120px; text-align: right;">
-        </div>
+        <!-- Filled by JS -->
+      </div>
     </div>
   </header>
 
