@@ -85,4 +85,44 @@ It handles:
    - Save favourites to a cloud table instead of localStorage
 
 ### 2.3. CSS Design
+
+#### base.css
+- Global theme
+- Colours, typography, layout rules
+#### login.css
+- Styles the login card
+- Centers input fields
+- Consistent button and form design
+#### recipes.css
+- Layout grid for recipes
+- Card designs for each recipe
+#### recipe.css
+- Detailed view styling
+- Ingredients lists, dividers, spacing
+The separation ensures readability, maintainability, and easy updates.
+
+## 3. Backend (Supabase) Design
+supabase acts as the backend systemfor Authentication, Storage, and (future) Database.
+
+### 3.1. Authentication
+Uses Email + Password provider.
+
+#### Features:
+- Sign-in
+- Automatic sign-up
+- Token-based session s
+- Session auto-refresh
+- Session restore on page reload
+- Secure JWT-based authentication
+#### The workflow is:
+1. User submits login form
+2. Front-end calls:
+   - supabase.auth.signInWithPassword()
+3. If user does not exist → signUp is triggered
+4. Supabase returns:
+   - user info
+   - access token
+   - refresh token
+5. Tokens are stored automatically by Supabase
+6. User session persists across refreshes
  
