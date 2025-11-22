@@ -109,15 +109,12 @@ Iteration 1 implemented the working login, pantry, and recipe generation logic t
     - Discover Recipes section (search, category, sort, pagination).
     - Recipe Generator section (category, key ingredient, Generate, Surprise Me).
     - My Pantry section with Name/Quantity/Expiry inputs.
-- Insert mockup design or screenshots from tools like Figma, or screenshots from the live site:  
-  `https://redonsh.github.io/Advanced-software-Engineering-/`
 
 ---
 
 # Completed
 
-- Insert screenshots of completed Iteration 1 features:
-  - Sign in page.
-  - Discover/Generator section with empty state (e.g., “Loading recipes…” / “0 results”).
-  - My Pantry section with add ingredient form.
-- If you have multiple versions (changes between iterations), show them all so the marker can see your progress.
+<img width="443" height="552" alt="image" src="https://github.com/user-attachments/assets/2c29dd98-5084-487a-b85c-c83a356d8e40" />
+<img width="278" height="562" alt="image" src="https://github.com/user-attachments/assets/11e7f8d1-183e-4833-84d0-8c516d867f57" />
+<img width="860" height="575" alt="image" src="https://github.com/user-attachments/assets/37acdd36-3a4f-48ea-bbf7-ebb2ce1f61da" />
+
