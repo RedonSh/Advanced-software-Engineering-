@@ -1,4 +1,0 @@
-#Website Overview: RecipeSite
-
-###Purpose:
-RecipeSite is a web application where users can browse, save, and generate recipes. It has both a clean user interface and a cloud-connected backend using Supabase (for database, authentication, and storage).
