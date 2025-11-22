@@ -163,6 +163,6 @@ Total: 10 days
 # Actual iterations
 1. Iteration 1: [(https://github.com/RedonSh/Advanced-software-Engineering-/blob/main/iteration_1.md](https://github.com/RedonSh/Advanced-software-Engineering-/blob/main/iteration_1.md)
 2. Iteration 2: [(https://github.com/RedonSh/Advanced-software-Engineering-/blob/main/iteration_2.md](https://github.com/RedonSh/Advanced-software-Engineering-/blob/main/iteration_2.md)
-3. Iteration 3: [(https://github.com/RedonSh/Advanced-software-Engineering-/blob/main/iteration_3.md](https://github.com/RedonSh/Advanced-software-Engineering-/blob/main/iteration_3.md)
+3. Iteration 3: [(https://github.com/RedonSh/Advanced-software-Engineering-/blob/main/iteration_3.md](https://github.com/RedonSh/Advanced-software-Engineering-/blob/main/Iteration_3.md)
 
 
