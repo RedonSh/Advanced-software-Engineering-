@@ -2,7 +2,7 @@
    common.js — core helpers for RecipeSite
    - Recipes: Supabase
    - Favourites: localStorage + (if logged in) Supabase "user_favorites"
-   - Pantry: localStorage (for now)
+   - Pantry: localStorage + (if logged in) Supabase "pantry"
    ========================================================================= */
 
 const $$  = (s, c=document)=>c.querySelector(s);
@@ -10,12 +10,18 @@ const onReady = (fn)=>document.readyState!=='loading'
   ? fn() : document.addEventListener('DOMContentLoaded', fn);
 
 /* -------------------------------------------------------------------------
-   FAVOURITES (local + per-user in Supabase)
+   AUTH SHARED STATE
    ------------------------------------------------------------------------- */
 
-const FAV_KEY = 'fav_recipes';     // localStorage key
-let currentUserId = null;          // Supabase auth user id
-let authSyncStarted = false;
+let currentUserId = null;      // Supabase auth user id
+let authSyncStarted = false;   // ensure we only hook auth once
+
+/* -------------------------------------------------------------------------
+   FAVOURITES (local + per-user in Supabase: table "user_favorites")
+   ------------------------------------------------------------------------- */
+
+const FAV_KEY    = 'fav_recipes'; // localStorage key for favourites
+const PANTRY_KEY = 'pantry';      // localStorage key for pantry
 
 /** Read favourite IDs from localStorage as a Set<string> */
 function getFavSet() {
@@ -74,10 +80,180 @@ async function toggleFav(recipeId) {
   return !wasFav;
 }
 
+/* -------------------------------------------------------------------------
+   PANTRY (local + per-user in Supabase: table "pantry")
+   ------------------------------------------------------------------------- */
+
+/**
+ * Pantry item shape in localStorage:
+ * { id?: string | null, name: string, quantity: string, expiry?: string | null }
+ */
+
+function getPantryLocal() {
+  const raw = localStorage.getItem(PANTRY_KEY) || '[]';
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+function savePantryLocal(items) {
+  localStorage.setItem(PANTRY_KEY, JSON.stringify(items || []));
+}
+
+/** Sync pantry from Supabase into localStorage for the current user */
+async function syncPantryFromRemote() {
+  if (!currentUserId || !window.supabase || !supabase.from) return;
+
+  const { data, error } = await supabase
+    .from('pantry')
+    .select('id, name, quantity, expiry')
+    .eq('user_id', currentUserId)
+    .order('name', { ascending: true });
+
+  if (error) {
+    console.warn('[pantry] fetch remote error:', error.message);
+    return;
+  }
+
+  const list = (data || []).map(row => ({
+    id: row.id,
+    name: row.name || '',
+    quantity: row.quantity || '',
+    // expiry comes back as date or null; store as string or null
+    expiry: row.expiry || null
+  }));
+
+  savePantryLocal(list);
+}
+
+/** Public pantry list used by UI (always returns local view) */
+function pantryList() {
+  return getPantryLocal();
+}
+
+/** Add pantry item locally, and if logged in also to Supabase "pantry" */
+function pantryAdd(item) {
+  const items = getPantryLocal();
+  const newItem = {
+    id      : null,
+    name    : item.name,
+    quantity: item.quantity,
+    expiry  : item.expiry || null
+  };
+  const index = items.length;
+  items.push(newItem);
+  savePantryLocal(items);
+
+  if (currentUserId && window.supabase && supabase.from) {
+    supabase
+      .from('pantry')
+      .insert({
+        user_id : currentUserId,
+        name    : newItem.name,
+        quantity: newItem.quantity,
+        expiry  : newItem.expiry
+      })
+      .select('id, name, quantity, expiry')
+      .single()
+      .then(({ data, error }) => {
+        if (error || !data) {
+          console.warn('[pantry] remote add error:', error?.message || error);
+          return;
+        }
+        const latest = getPantryLocal();
+        if (index < latest.length) {
+          latest[index] = {
+            id      : data.id,
+            name    : data.name || newItem.name,
+            quantity: data.quantity || newItem.quantity,
+            expiry  : data.expiry || newItem.expiry
+          };
+          savePantryLocal(latest);
+        }
+      })
+      .catch(e => console.warn('[pantry] remote add catch:', e?.message || e));
+  }
+}
+
+/** Update pantry item at index i, both locally and (if possible) remotely */
+function pantryUpdate(i, item) {
+  const items = getPantryLocal();
+  if (i < 0 || i >= items.length) return;
+
+  const existing = items[i];
+  const updated = {
+    ...existing,
+    name    : item.name,
+    quantity: item.quantity,
+    expiry  : item.expiry || null
+  };
+
+  items[i] = updated;
+  savePantryLocal(items);
+
+  if (
+    currentUserId &&
+    existing &&
+    existing.id &&
+    window.supabase &&
+    supabase.from
+  ) {
+    supabase
+      .from('pantry')
+      .update({
+        name    : updated.name,
+        quantity: updated.quantity,
+        expiry  : updated.expiry
+      })
+      .eq('id', existing.id)
+      .then(({ error }) => {
+        if (error) {
+          console.warn('[pantry] remote update error:', error.message);
+        }
+      })
+      .catch(e => console.warn('[pantry] remote update catch:', e?.message || e));
+  }
+}
+
+/** Delete pantry item at index i, locally and (if possible) remotely */
+function pantryDelete(i) {
+  const items = getPantryLocal();
+  if (i < 0 || i >= items.length) return;
+
+  const existing = items[i];
+  items.splice(i, 1);
+  savePantryLocal(items);
+
+  if (
+    currentUserId &&
+    existing &&
+    existing.id &&
+    window.supabase &&
+    supabase.from
+  ) {
+    supabase
+      .from('pantry')
+      .delete()
+      .eq('id', existing.id)
+      .then(({ error }) => {
+        if (error) {
+          console.warn('[pantry] remote delete error:', error.message);
+        }
+      })
+      .catch(e => console.warn('[pantry] remote delete catch:', e?.message || e));
+  }
+}
+
+/* -------------------------------------------------------------------------
+   SYNC ON AUTH CHANGES (favourites + pantry)
+   ------------------------------------------------------------------------- */
+
 /**
  * Called when auth state changes.
  * - Sets currentUserId
- * - If logging in, syncs favourites between localStorage and Supabase.
+ * - If logging in, syncs favourites + pantry from Supabase to localStorage.
  */
 function setCurrentUser(user) {
   const newId = user?.id || null;
@@ -86,9 +262,12 @@ function setCurrentUser(user) {
   currentUserId = newId;
 
   if (currentUserId) {
-    // User just logged in or session restored → sync favourites
+    // User just logged in or session restored → sync from Supabase
     syncFavouritesFromRemote().catch(err => {
       console.warn('[favorites] syncFavouritesFromRemote error:', err?.message || err);
+    });
+    syncPantryFromRemote().catch(err => {
+      console.warn('[pantry] syncPantryFromRemote error:', err?.message || err);
     });
   }
 }
@@ -142,11 +321,7 @@ async function syncFavouritesFromRemote() {
 
 /**
  * Initialise auth listener once, so we know which user is logged in and can
- * sync favourites for them.
- *
- * This runs on ANY page that:
- *  - includes Supabase
- *  - and loads this common.js
+ * sync favourites & pantry for them.
  */
 function initAuthFavouriteSync() {
   if (authSyncStarted) return;
@@ -166,7 +341,6 @@ function initAuthFavouriteSync() {
         return;
       }
       if (data?.user) {
-        // Logged-in session on page load
         setCurrentUser(data.user);
       }
     })
@@ -177,45 +351,21 @@ function initAuthFavouriteSync() {
     const user = session?.user || null;
 
     if (event === 'SIGNED_OUT') {
-      // User explicitly logged out → clear user + local favourites
+      // User explicitly logged out → clear user + local favourites & pantry
       currentUserId = null;
-      saveFavSet(new Set());     // 👈 wipes fav_recipes in localStorage
+      saveFavSet(new Set());   // clears fav_recipes in localStorage
+      savePantryLocal([]);     // clears pantry in localStorage
       return;
     }
 
-    // For sign-in / token refresh / initial session with user
     if (user) {
       setCurrentUser(user);
     }
   });
 }
 
-
-/* Start auth-favourites sync as soon as this file runs */
+/* Start auth-favourites+pantry sync as soon as this file runs */
 initAuthFavouriteSync();
-
-/* -------------------------------------------------------------------------
-   PANTRY (local only, for now)
-   ------------------------------------------------------------------------- */
-
-function pantryList() {
-  return JSON.parse(localStorage.getItem('pantry') || '[]');
-}
-function pantryAdd(item) {
-  const p = pantryList();
-  p.push(item);
-  localStorage.setItem('pantry', JSON.stringify(p));
-}
-function pantryUpdate(i, item) {
-  const p = pantryList();
-  p[i] = item;
-  localStorage.setItem('pantry', JSON.stringify(p));
-}
-function pantryDelete(i) {
-  const p = pantryList();
-  p.splice(i, 1);
-  localStorage.setItem('pantry', JSON.stringify(p));
-}
 
 /* -------------------------------------------------------------------------
    Supabase recipe helpers
@@ -275,7 +425,7 @@ window.RecipeSite = {
   getFavSet,
   toggleFav,
 
-  // pantry (LOCAL ONLY for now)
+  // pantry
   pantryList,
   pantryAdd,
   pantryUpdate,

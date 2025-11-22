@@ -98,7 +98,7 @@
       font-size:.8rem;
     }
 
-    /* Pantry enhancements */
+    /* Pantry layout + cards */
     .pantry-layout{
       display:grid;
       grid-template-columns:300px 1fr;
@@ -108,7 +108,6 @@
     @media (max-width:900px){
       .pantry-layout{grid-template-columns:1fr;}
     }
-
     .pantry-chips{
       display:flex;
       flex-wrap:wrap;
@@ -126,13 +125,11 @@
     .pantry-chip:hover{
       background:#eef2ff;
     }
-
     .pantry-summary{
       font-size:0.85rem;
       color:#6b7280;
       margin-bottom:6px;
     }
-
     .pantry-card{
       display:flex;
       flex-direction:column;
@@ -160,198 +157,281 @@
       gap:8px;
       margin-top:2px;
     }
+    .field-group{
+      display:flex;
+      gap:8px;
+      margin-top:4px;
+    }
+    .field-group .field{
+      flex:1;
+    }
   </style>
 
   <script>
-  document.addEventListener('DOMContentLoaded', () => {
-
-    function startAppLogic() {
-      const alertBox = document.getElementById('alert');
-      const showAlert = (msg) => { alertBox.textContent = msg; alertBox.hidden = false; };
-      const hideAlert = () => { alertBox.hidden = true; alertBox.textContent = ''; };
-
-      /* ===== AUTH UI (OPTIONAL) ===== */
-      function updateAuthUI(session) {
-        const authContainer = document.querySelector('header .auth');
-        if (!authContainer) return;
-
-        if (!session) {
-          const next = encodeURIComponent('recipes.html' + location.search + location.hash);
-          authContainer.innerHTML = `
-            <a class="btn small outline" href="index.html?next=${next}">Sign in</a>
-          `;
+    document.addEventListener('DOMContentLoaded', () => {
+      function waitForReady(cb) {
+        if (window.supabase && window.RecipeSite && supabase.auth) {
+          cb();
         } else {
-          const user = session.user;
-          const displayName = user.user_metadata?.username || user.email.split('@')[0];
-          authContainer.innerHTML = `
-            <span style="font-size: 0.9rem; margin-right: 12px;">Hi, ${displayName}</span>
-            <button class="btn small outline" id="logoutButton">Logout</button>
-          `;
-          const logoutBtn = authContainer.querySelector('#logoutButton');
-          if (logoutBtn) {
-            logoutBtn.addEventListener('click', async () => {
-              try {
-                await supabase.auth.signOut();
-              } catch (e) {
-                console.error('signOut error', e);
-              }
-            });
-          }
+          setTimeout(() => waitForReady(cb), 100);
         }
       }
 
-      // Listen for auth changes (no redirect for guests)
-      supabase.auth.onAuthStateChange((event, session) => {
-        updateAuthUI(session || null);
+      waitForReady(() => {
+        const alertBox = document.getElementById('alert');
+        const showAlert = (msg) => {
+          if (!alertBox) return;
+          alertBox.textContent = msg;
+          alertBox.hidden = false;
+        };
+        const hideAlert = () => {
+          if (!alertBox) return;
+          alertBox.hidden = true;
+          alertBox.textContent = '';
+        };
 
-        // If user logs out, clear favourites view immediately
-        if (event === 'SIGNED_OUT') {
-          const favGrid = document.getElementById('favGrid');
-          if (favGrid) {
-            favGrid.innerHTML = '<p class="muted">No favourites yet.</p>';
+        /* =============== AUTH HEADER =============== */
+        function updateAuthUI(session) {
+          const authContainer = document.querySelector('header .auth');
+          if (!authContainer) return;
+
+          if (!session || !session.user) {
+            const next = encodeURIComponent('recipes.html' + location.search + location.hash);
+            authContainer.innerHTML =
+              '<a class="btn small outline" href="index.html?next=' + next + '">Sign in</a>';
+          } else {
+            const user = session.user;
+            const displayName =
+              (user.user_metadata && user.user_metadata.username) ||
+              user.email.split('@')[0];
+            authContainer.innerHTML =
+              '<span style="font-size:0.9rem;margin-right:12px;">Hi, ' + displayName + '</span>' +
+              '<button class="btn small outline" id="logoutButton">Logout</button>';
+            const logoutBtn = document.getElementById('logoutButton');
+            if (logoutBtn) {
+              logoutBtn.addEventListener('click', async () => {
+                try { await supabase.auth.signOut(); }
+                catch (e) { console.error('signOut error', e); }
+              });
+            }
           }
         }
-      });
 
-
-      /* ===== MAIN APP BOOT ===== */
-      function bootApp() {
-        /* ---------- Router ---------- */
-        const sections = [...document.querySelectorAll('section.route')];
-        const tabs = [...document.querySelectorAll('header .nav a')];
-
-        function setActive(hash){
-          const route = (hash || '#browse').replace('#','');
-          sections.forEach(s => { s.hidden = s.dataset.route !== route; });
-          tabs.forEach(a => {
-            a.setAttribute(
-              'aria-current',
-              a.getAttribute('href') === '#'+route ? 'page' : 'false'
-            );
+        // Initial session
+        supabase.auth.getSession()
+          .then(({ data }) => {
+            updateAuthUI(data && data.session ? data.session : null);
+          })
+          .catch((e) => {
+            console.warn('getSession failed', e);
+            updateAuthUI(null);
           });
-          if (route === 'favourites') renderFavourites();
-          if (route === 'generator')  bootGenerator();
-          if (route === 'pantry')     bootPantry();
-        }
 
-        window.addEventListener('hashchange', () => setActive(location.hash));
-        if (!location.hash) location.hash = '#browse';
-        setActive(location.hash);
-
-        /* ---------- Browse ---------- */
-        const state = { all: [], filtered: [], page:1, pageSize:12 };
-        const grid = document.getElementById('browseGrid');
-        const qInput = document.getElementById('searchInput');
-        const catSelect = document.getElementById('categorySelect');
-        const sortSelect = document.getElementById('sortSelect');
-        const prevBtn = document.getElementById('pagePrev');
-        const nextBtn = document.getElementById('pageNext');
-        const globalSearch = document.getElementById('globalSearch');
-
-        const debounce = (fn,ms)=>{let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};};
-        const normalize = s => (s||'').toString().toLowerCase();
-
-        function cardHTML(r){
-          const to = `recipe-detail.html?id=${encodeURIComponent(r.id)}`;
-          const imgHtml = r.image ? `
-            <a class="thumb-link" href="${to}">
-              <img class="thumb" src="${r.image}" alt="${r.title}" loading="lazy" />
-            </a>` : `<div class="noimg-badge">No image</div>`;
-          return `
-            <article class="card link-card">
-              ${imgHtml}
-              <div class="row">
-                <h2 class="card-title"><a class="title-link" href="${to}">${r.title}</a></h2>
-                <button class="btn small" type="button" data-fav="${r.id}">☆ Save</button>
-              </div>
-              <div class="pill cat">${r.category || ''}</div>
-              <p class="muted">Ingredients: ${(r.ingredients||[]).slice(0,4).join(', ')}...</p>
-              <div class="row"><a class="btn small outline" href="${to}">View details</a></div>
-            </article>`;
-        }
-
-        function renderGrid(items){
-          if (!items.length) {
-            grid.innerHTML = '<p class="muted">No recipes found.</p>';
-            return;
+        // Auth changes
+        supabase.auth.onAuthStateChange((event, session) => {
+          updateAuthUI(session || null);
+          if (event === 'SIGNED_OUT') {
+            const favGrid = document.getElementById('favGrid');
+            if (favGrid) favGrid.innerHTML = '<p class="muted">No favourites yet.</p>';
+            const pantryListEl = document.getElementById('pantryList');
+            if (pantryListEl) pantryListEl.innerHTML = '<p class="muted">Your pantry is empty.</p>';
           }
-          grid.innerHTML = items.map(cardHTML).join('');
-          grid.querySelectorAll('[data-fav]').forEach(btn=>{
-            btn.addEventListener('click', async (e)=>{
-              e.preventDefault();
+        });
+
+        /* =============== ROUTER =============== */
+        const sections = Array.from(document.querySelectorAll('section.route'));
+        const tabs = Array.from(document.querySelectorAll('header .nav a'));
+        let browseBooted = false;
+        let genBooted = false;
+        let pantryBooted = false;
+
+        function setRouteFromHash() {
+          const hash = location.hash || '#browse';
+          const route = hash.replace('#', '') || 'browse';
+
+          sections.forEach((sec) => {
+            sec.hidden = sec.dataset.route !== route;
+          });
+
+          tabs.forEach((a) => {
+            const isActive = a.getAttribute('href') === '#' + route;
+            a.setAttribute('aria-current', isActive ? 'page' : 'false');
+          });
+
+          if (route === 'browse') {
+            if (!browseBooted) { browseBooted = true; bootBrowse(); }
+          } else if (route === 'generator') {
+            if (!genBooted) { genBooted = true; bootGenerator(); }
+          } else if (route === 'pantry') {
+            if (!pantryBooted) { pantryBooted = true; bootPantry(); }
+          } else if (route === 'favourites') {
+            renderFavourites();
+          }
+        }
+
+        window.addEventListener('hashchange', setRouteFromHash);
+        if (!location.hash) location.hash = '#browse';
+        setRouteFromHash();
+
+        /* =============== SHARED CARD RENDER =============== */
+        function cardHTML(r) {
+          const to = 'recipe-detail.html?id=' + encodeURIComponent(r.id);
+          const imgHtml = r.image
+            ? '<a class="thumb-link" href="' + to + '"><img class="thumb" src="' + r.image +
+              '" alt="' + r.title + '" loading="lazy" /></a>'
+            : '<div class="noimg-badge">No image</div>';
+          const ingPreview = Array.isArray(r.ingredients)
+            ? r.ingredients.slice(0, 4).join(', ')
+            : '';
+          return [
+            '<article class="card link-card">',
+              imgHtml,
+              '<div class="row">',
+                '<h2 class="card-title"><a class="title-link" href="', to, '">', r.title, '</a></h2>',
+                '<button class="btn small" type="button" data-fav="', r.id, '">☆ Save</button>',
+              '</div>',
+              '<div class="pill cat">', (r.category || ''), '</div>',
+              '<p class="muted">Ingredients: ', ingPreview, '...</p>',
+              '<div class="row"><a class="btn small outline" href="', to, '">View details</a></div>',
+            '</article>'
+          ].join('');
+        }
+
+        function wireFavButtons(container) {
+          if (!container) return;
+          container.querySelectorAll('[data-fav]').forEach((btn) => {
+            btn.addEventListener('click', async (ev) => {
+              ev.preventDefault();
               const id = btn.getAttribute('data-fav');
-              const s = await RecipeSite.toggleFav(id);
-              btn.textContent = s ? '✓ Saved' : '☆ Save';
+              try {
+                const isFav = await RecipeSite.toggleFav(id);
+                btn.textContent = isFav ? '✓ Saved' : '☆ Save';
+              } catch (e) {
+                console.error('toggleFav error', e);
+              }
             });
           });
         }
 
-        function sortList(list){
-          const mode = sortSelect.value || 'recent';
-          const copy = list.slice();
-          if (mode==='alpha') copy.sort((a,b)=>a.title.localeCompare(b.title));
-          return copy;
-        }
+        /* =============== BROWSE =============== */
+        function bootBrowse() {
+          const grid = document.getElementById('browseGrid');
+          const qInput = document.getElementById('searchInput');
+          const catSelect = document.getElementById('categorySelect');
+          const sortSelect = document.getElementById('sortSelect');
+          const prevBtn = document.getElementById('pagePrev');
+          const nextBtn = document.getElementById('pageNext');
+          const globalSearch = document.getElementById('globalSearch');
 
-        function applyFilters(){
-          const q = normalize(qInput.value);
-          const cat = catSelect.value || 'All';
-          let list = state.all;
-          if (cat!=='All') list = list.filter(r => (r.category||'').toLowerCase() === cat.toLowerCase());
-          if (q) list = list.filter(r => {
-            const hay = [r.title, r.category, ...(r.ingredients||[])].join(' ').toLowerCase();
-            return hay.includes(q);
-          });
-          state.filtered = sortList(list);
-          state.page = 1;
-          paginate();
-        }
+          const state = { all: [], filtered: [], page: 1, pageSize: 12 };
 
-        function paginate(){
-          const start = (state.page-1)*state.pageSize;
-          const slice = state.filtered.slice(start, start+state.pageSize);
-          renderGrid(slice);
-          prevBtn.disabled = state.page<=1;
-          nextBtn.disabled = start + state.pageSize >= state.filtered.length;
-        }
+          const debounce = (fn, ms) => {
+            let t;
+            return (...args) => {
+              clearTimeout(t);
+              t = setTimeout(() => fn(...args), ms);
+            };
+          };
+          const normalize = (s) => (s || '').toString().toLowerCase();
 
-        async function bootBrowse(){
-          try{
-            hideAlert();
-            const cats = await RecipeSite.listCategories();
-            catSelect.innerHTML = '<option>All</option>' + (cats||[]).map(c=>`<option>${c}</option>`).join('');
-            catSelect.value = 'All';
+          function applyFilters() {
+            const q = normalize(qInput.value);
+            const cat = catSelect.value || 'All';
 
-            const all = await RecipeSite.listRecipes();
-            if (!Array.isArray(all)) throw new Error('Unexpected response from DB.');
-            if (!all.length) showAlert('No recipes returned from the database. Check data, RLS policy, and ENV keys.');
-            state.all = all;
-            state.filtered = all;
+            let list = state.all;
+            if (cat !== 'All') {
+              list = list.filter((r) => (r.category || '').toLowerCase() === cat.toLowerCase());
+            }
+            if (q) {
+              list = list.filter((r) => {
+                const hay = [r.title, r.category, ...(r.ingredients || [])]
+                  .join(' ')
+                  .toLowerCase();
+                return hay.includes(q);
+              });
+            }
 
-            qInput.addEventListener('input', debounce(applyFilters,150));
-            catSelect.addEventListener('change', applyFilters);
-            sortSelect.addEventListener('change', applyFilters);
-            prevBtn.addEventListener('click', ()=>{state.page--; paginate();});
-            nextBtn.addEventListener('click', ()=>{state.page++; paginate();});
-            globalSearch.addEventListener('input', debounce(()=>{
-              qInput.value = globalSearch.value;
-              if (location.hash!=='#browse') location.hash='#browse';
-              applyFilters();
-            },150));
+            if (sortSelect.value === 'alpha') {
+              list = list.slice().sort((a, b) => a.title.localeCompare(b.title));
+            }
 
-            applyFilters();
-          }catch(err){
-            showAlert(err.message || String(err));
-            grid.innerHTML = '';
+            state.filtered = list;
+            state.page = 1;
+            paginate();
           }
-        }
-        
-        bootBrowse();
 
-        /* ---------- Generator ---------- */
-        let genBooted=false;
-        async function bootGenerator(){
-          if (genBooted) return; genBooted=true;
+          function paginate() {
+            const start = (state.page - 1) * state.pageSize;
+            const slice = state.filtered.slice(start, start + state.pageSize);
+
+            if (!slice.length) {
+              grid.innerHTML = '<p class="muted">No recipes found.</p>';
+            } else {
+              grid.innerHTML = slice.map(cardHTML).join('');
+              wireFavButtons(grid);
+            }
+
+            prevBtn.disabled = state.page <= 1;
+            nextBtn.disabled = start + state.pageSize >= state.filtered.length;
+          }
+
+          prevBtn.addEventListener('click', () => {
+            if (state.page > 1) {
+              state.page -= 1;
+              paginate();
+            }
+          });
+          nextBtn.addEventListener('click', () => {
+            const start = state.page * state.pageSize;
+            if (start < state.filtered.length) {
+              state.page += 1;
+              paginate();
+            }
+          });
+
+          qInput.addEventListener('input', debounce(applyFilters, 150));
+          catSelect.addEventListener('change', applyFilters);
+          sortSelect.addEventListener('change', applyFilters);
+          globalSearch.addEventListener(
+            'input',
+            debounce(() => {
+              qInput.value = globalSearch.value;
+              if (location.hash !== '#browse') {
+                location.hash = '#browse';
+              } else {
+                applyFilters();
+              }
+            }, 150)
+          );
+
+          (async () => {
+            try {
+              hideAlert();
+              const cats = await RecipeSite.listCategories();
+              catSelect.innerHTML =
+                '<option>All</option>' +
+                (cats || []).map((c) => '<option>' + c + '</option>').join('');
+              catSelect.value = 'All';
+
+              const all = await RecipeSite.listRecipes();
+              if (!Array.isArray(all) || !all.length) {
+                showAlert(
+                  'No recipes returned from the database. Check your Supabase data and policies.'
+                );
+              }
+              state.all = all || [];
+              state.filtered = state.all;
+              paginate();
+            } catch (err) {
+              console.error('bootBrowse error', err);
+              showAlert(err.message || String(err));
+              grid.innerHTML = '';
+            }
+          })();
+        }
+
+        /* =============== GENERATOR =============== */
+        function bootGenerator() {
           const genCat = document.getElementById('genCategory');
           const genKey = document.getElementById('genKey');
           const genBtn = document.getElementById('genBtn');
@@ -359,56 +439,77 @@
           const genGrid = document.getElementById('genGrid');
           const genCount = document.getElementById('genCount');
 
-          try{
-            const cats = await RecipeSite.listCategories();
-            genCat.innerHTML = '<option>All</option>' + (cats||[]).map(c=>`<option>${c}</option>`).join('');
-            genCat.value = 'All';
-          }catch(e){ showAlert('Generator: '+e.message); }
+          async function loadCats() {
+            try {
+              const cats = await RecipeSite.listCategories();
+              genCat.innerHTML =
+                '<option>All</option>' +
+                (cats || []).map((c) => '<option>' + c + '</option>').join('');
+              genCat.value = 'All';
+            } catch (e) {
+              console.warn('Generator categories error', e);
+            }
+          }
 
-          function render(list){
-            genGrid.innerHTML = list.map(cardHTML).join('') || '<p class="muted">No matches.</p>';
-            genCount.textContent = `${list.length} result${list.length===1?'':'s'}`;
-            genGrid.querySelectorAll('[data-fav]').forEach(btn=>{
-              btn.addEventListener('click', async (e)=>{
-                e.preventDefault();
-                const id = btn.getAttribute('data-fav');
-                const s = await RecipeSite.toggleFav(id);
-                btn.textContent = s ? '✓ Saved' : '☆ Save';
-              });
-            });
+          function render(list) {
+            if (!list.length) {
+              genGrid.innerHTML = '<p class="muted">No matches.</p>';
+            } else {
+              genGrid.innerHTML = list.map(cardHTML).join('');
+              wireFavButtons(genGrid);
+            }
+            genCount.textContent =
+              list.length + ' result' + (list.length === 1 ? '' : 's');
           }
-          async function generate(n=9){
-            try{
+
+          async function generate(n) {
+            try {
               const all = await RecipeSite.listRecipes();
-              let list = all;
-              const cat = genCat.value||'All';
-              const key = (genKey.value||'').trim().toLowerCase();
-              if (cat!=='All') list = list.filter(r => (r.category||'').toLowerCase()===cat.toLowerCase());
-              if (key) list = list.filter(r => (r.ingredients||[]).join(' ').toLowerCase().includes(key));
-              list = list.sort(()=>Math.random()-0.5).slice(0,n);
+              let list = all || [];
+
+              const cat = genCat.value || 'All';
+              const key = (genKey.value || '').trim().toLowerCase();
+
+              if (cat !== 'All') {
+                list = list.filter(
+                  (r) => (r.category || '').toLowerCase() === cat.toLowerCase()
+                );
+              }
+              if (key) {
+                list = list.filter((r) =>
+                  (r.ingredients || []).join(' ').toLowerCase().includes(key)
+                );
+              }
+
+              list = list.sort(() => Math.random() - 0.5).slice(0, n);
               render(list);
-            }catch(e){ showAlert('Generator: '+e.message); }
+            } catch (e) {
+              console.error('Generator error', e);
+              showAlert('Generator: ' + (e.message || String(e)));
+            }
           }
-          genBtn.addEventListener('click', ()=>generate(9));
-          surprise.addEventListener('click', ()=>generate(3));
+
+          genBtn.addEventListener('click', () => generate(9));
+          surprise.addEventListener('click', () => generate(3));
+
+          loadCats();
           generate(9);
         }
 
-        /* ---------- Pantry ---------- */
-        let pantryBooted = false;
+        /* =============== PANTRY (improved) =============== */
         function bootPantry() {
-          if (pantryBooted) return;
-          pantryBooted = true;
-
-          const listEl   = document.getElementById('pantryList');
-          const quickEl  = document.getElementById('pantryQuick');
-          const nameEl   = document.getElementById('pantryName');
-          const qtyEl    = document.getElementById('pantryQty');
-          const expEl    = document.getElementById('pantryExpiry');
-          const addBtn   = document.getElementById('addPantryBtn');
+          const listEl = document.getElementById('pantryList');
+          const quickEl = document.getElementById('pantryQuick');
+          const nameEl = document.getElementById('pantryName');
+          const amountEl = document.getElementById('pantryAmount');
+          const unitEl = document.getElementById('pantryUnit');
+          const expEl = document.getElementById('pantryExpiry');
+          const addBtn = document.getElementById('addPantryBtn');
           const clearBtn = document.getElementById('clearPantryForm');
 
           let editIndex = null;
+          const DEFAULT_UNIT = 'pcs';
+          const VALID_UNITS = new Set(['pcs','g','kg','ml','L','tbsp','tsp','cup','cups']);
 
           const quickItems = [
             'Flour','Sugar','Brown sugar','Salt','Pepper',
@@ -424,23 +525,39 @@
             const d = new Date(exp + 'T00:00:00');
             if (Number.isNaN(d.getTime())) return 'Expiry: ' + exp;
             const diffDays = Math.floor((d - today) / (1000 * 60 * 60 * 24));
-            if (diffDays < 0) return `Expired ${Math.abs(diffDays)} day${Math.abs(diffDays) === 1 ? '' : 's'} ago`;
+            if (diffDays < 0) return 'Expired ' + Math.abs(diffDays) + ' day' + (Math.abs(diffDays) === 1 ? '' : 's') + ' ago';
             if (diffDays === 0) return 'Expires today';
             if (diffDays === 1) return 'Expires tomorrow';
-            return `Expires in ${diffDays} days`;
+            return 'Expires in ' + diffDays + ' days';
+          }
+
+          function parseQuantity(q) {
+            if (!q) return { amount: '', unit: DEFAULT_UNIT };
+            const parts = String(q).trim().split(/\s+/);
+            if (!parts.length) return { amount: '', unit: DEFAULT_UNIT };
+
+            const maybe = parseFloat(parts[0].replace(',', '.'));
+            if (!Number.isNaN(maybe) && parts.length > 1) {
+              const unitCandidate = parts[1];
+              return {
+                amount: String(maybe),
+                unit: VALID_UNITS.has(unitCandidate) ? unitCandidate : DEFAULT_UNIT
+              };
+            }
+            return { amount: '', unit: DEFAULT_UNIT };
           }
 
           function renderQuick() {
             if (!quickEl) return;
             quickEl.innerHTML = '';
-            quickItems.forEach(name => {
+            quickItems.forEach((name) => {
               const btn = document.createElement('button');
               btn.type = 'button';
               btn.className = 'pantry-chip';
               btn.textContent = name;
               btn.addEventListener('click', () => {
                 nameEl.value = name;
-                if (!qtyEl.value) qtyEl.value = '1';
+                if (!amountEl.value) amountEl.value = '1';
                 nameEl.focus();
               });
               quickEl.appendChild(btn);
@@ -457,7 +574,8 @@
 
             const summary = document.createElement('div');
             summary.className = 'pantry-summary';
-            summary.textContent = `You have ${items.length} item${items.length === 1 ? '' : 's'} in your pantry.`;
+            summary.textContent =
+              'You have ' + items.length + ' item' + (items.length === 1 ? '' : 's') + ' in your pantry.';
             listEl.appendChild(summary);
 
             items.forEach((it, idx) => {
@@ -488,8 +606,10 @@
 
               editBtn.addEventListener('click', () => {
                 nameEl.value = it.name;
-                qtyEl.value = it.quantity;
                 expEl.value = it.expiry || '';
+                const parsed = parseQuantity(it.quantity);
+                amountEl.value = parsed.amount;
+                unitEl.value = parsed.unit;
                 editIndex = idx;
                 addBtn.textContent = 'Save Changes';
               });
@@ -504,7 +624,6 @@
 
               buttonRow.appendChild(editBtn);
               buttonRow.appendChild(delBtn);
-
               header.appendChild(title);
               header.appendChild(buttonRow);
 
@@ -525,7 +644,8 @@
 
           function resetForm() {
             nameEl.value = '';
-            qtyEl.value = '';
+            amountEl.value = '';
+            unitEl.value = DEFAULT_UNIT;
             expEl.value = '';
             editIndex = null;
             addBtn.textContent = 'Add Ingredient';
@@ -533,14 +653,20 @@
 
           addBtn.addEventListener('click', () => {
             const name = nameEl.value.trim();
-            const quantity = qtyEl.value.trim();
+            const amount = amountEl.value.trim();
+            const unit = unitEl.value;
             const expiry = expEl.value;
 
-            if (!name || !quantity) {
-              alert('Please enter ingredient name and quantity.');
+            if (!name) {
+              alert('Please enter an ingredient name.');
+              return;
+            }
+            if (!amount) {
+              alert('Please enter an amount.');
               return;
             }
 
+            const quantity = amount + ' ' + unit;
             const item = { name, quantity, expiry };
 
             if (editIndex !== null) {
@@ -559,66 +685,35 @@
             });
           }
 
-          // Initial render
           renderQuick();
           renderList();
         }
 
-        /* ---------- Favourites ---------- */
-        async function renderFavourites(){
-          const grid=document.getElementById('favGrid');
-          grid.innerHTML='<p class="muted">Loading…</p>';
-          try{
-            const ids=[...RecipeSite.getFavSet()];
-            const all=await RecipeSite.listRecipes();
-            const favs=all.filter(r=>ids.includes(r.id));
-            if(!favs.length){
-              grid.innerHTML='<p class="muted">No favourites yet.</p>';
+        /* =============== FAVOURITES =============== */
+        async function renderFavourites() {
+          const grid = document.getElementById('favGrid');
+          grid.innerHTML = '<p class="muted">Loading…</p>';
+          try {
+            const ids = Array.from(RecipeSite.getFavSet());
+            const all = await RecipeSite.listRecipes();
+            const favs = (all || []).filter((r) => ids.includes(r.id));
+            if (!favs.length) {
+              grid.innerHTML = '<p class="muted">No favourites yet.</p>';
               return;
             }
-            grid.innerHTML=favs.map(cardHTML).join('');
-            grid.querySelectorAll('[data-unfav],[data-fav]').forEach(btn=>{
-              const id = btn.getAttribute('data-unfav') || btn.getAttribute('data-fav');
-              btn.addEventListener('click', async ()=>{
-                await RecipeSite.toggleFav(id);
-                btn.closest('.card').remove();
-                if(!grid.children.length) grid.innerHTML='<p class="muted">No favourites.</p>';
-              });
-            });
-          }catch(e){
-            showAlert('Favourites: '+e.message);
-            grid.innerHTML='';
+            grid.innerHTML = favs.map(cardHTML).join('');
+            wireFavButtons(grid);
+          } catch (e) {
+            console.error('Favourites error', e);
+            showAlert('Favourites: ' + (e.message || String(e)));
+            grid.innerHTML = '';
           }
         }
-      } // end bootApp
-
-      // Get initial session once, then boot app
-      (async () => {
-        try {
-          const { data } = await supabase.auth.getSession();
-          updateAuthUI(data.session || null);
-        } catch (e) {
-          console.warn('getSession failed', e);
-          updateAuthUI(null);
-        }
-        bootApp();
-      })();
-    } // end startAppLogic
-
-    // Wait for Supabase to be ready, then start
-    const checkSupabase = setInterval(() => {
-      if (window.supabase && supabase.auth) {
-        clearInterval(checkSupabase);
-        startAppLogic();
-      }
-    }, 100);
-    
-  });
+      }); // waitForReady
+    }); // DOMContentLoaded
   </script>
-
 </head>
 <body>
-
   <header class="site-head">
     <div class="container wrap">
       <a href="recipes.html#browse" class="brand">
@@ -627,26 +722,23 @@
         </svg>
         <span>RecipeSite</span>
       </a>
-      
+
       <nav class="nav">
         <a href="#browse" aria-current="page">Browse</a>
         <a href="#generator">Generator</a>
         <a href="#pantry">Pantry</a>
         <a href="#favourites">Favourites</a>
       </nav>
-      
+
       <div class="head-search">
         <input id="globalSearch" type="search" placeholder="Search all recipes..." />
       </div>
-      
-      <div class="auth" style="min-width: 120px; text-align: right;">
-        <!-- Filled by JS -->
-      </div>
+
+      <div class="auth" style="min-width: 120px; text-align: right;"></div>
     </div>
   </header>
 
   <main class="container" style="padding-top: 24px; padding-bottom: 24px;">
-    
     <div id="alert" class="alert" hidden></div>
 
     <section class="route" data-route="browse">
@@ -668,11 +760,11 @@
           </select>
         </label>
       </div>
-      
+
       <div id="browseGrid" class="recipe-grid">
         <p class="muted">Loading recipes...</p>
       </div>
-      
+
       <nav class="pagination" style="display: flex; justify-content: center; gap: 12px; margin-top: 24px;">
         <button id="pagePrev" class="btn outline" disabled>← Previous</button>
         <button id="pageNext" class="btn outline" disabled>Next →</button>
@@ -705,10 +797,9 @@
         <aside class="card">
           <h3>Add to Pantry</h3>
           <p class="muted small" style="margin-top:4px;">
-            Tap a common ingredient or type your own, then adjust the quantity and expiry.
+            Tap a common ingredient or type your own, then set the amount, unit and expiry.
           </p>
 
-          <!-- Quick list of common items -->
           <div id="pantryQuick" class="pantry-chips"></div>
 
           <form id="pantryForm">
@@ -716,14 +807,34 @@
               <span>Name</span>
               <input id="pantryName" type="text" required />
             </label>
-            <label class="field">
-              <span>Quantity</span>
-              <input id="pantryQty" type="text" required placeholder="e.g. 1 kg / 2 cups" />
-            </label>
+
+            <div class="field-group">
+              <div class="field">
+                <span>Amount</span>
+                <input id="pantryAmount" type="number" min="0" step="0.01" inputmode="decimal"
+                       placeholder="e.g. 1.5" />
+              </div>
+              <div class="field">
+                <span>Unit</span>
+                <select id="pantryUnit">
+                  <option value="pcs">pcs</option>
+                  <option value="g">g</option>
+                  <option value="kg">kg</option>
+                  <option value="ml">mL</option>
+                  <option value="L">L</option>
+                  <option value="tbsp">tbsp</option>
+                  <option value="tsp">tsp</option>
+                  <option value="cup">cup</option>
+                  <option value="cups">cups</option>
+                </select>
+              </div>
+            </div>
+
             <label class="field">
               <span>Expiry</span>
               <input id="pantryExpiry" type="date" />
             </label>
+
             <div class="row" style="margin-top:10px;justify-content:flex-end;gap:8px;">
               <button id="clearPantryForm" class="btn outline" type="button">Clear</button>
               <button id="addPantryBtn" class="btn" type="button">Add Ingredient</button>
@@ -743,8 +854,6 @@
         <p class="muted">Loading favourites...</p>
       </div>
     </section>
-
   </main>
-  
 </body>
 </html>
