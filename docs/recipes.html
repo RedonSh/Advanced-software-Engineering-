@@ -201,9 +201,18 @@
       }
 
       // Listen for auth changes (no redirect for guests)
-      supabase.auth.onAuthStateChange((_event, session) => {
+      supabase.auth.onAuthStateChange((event, session) => {
         updateAuthUI(session || null);
+
+        // If user logs out, clear favourites view immediately
+        if (event === 'SIGNED_OUT') {
+          const favGrid = document.getElementById('favGrid');
+          if (favGrid) {
+            favGrid.innerHTML = '<p class="muted">No favourites yet.</p>';
+          }
+        }
       });
+
 
       /* ===== MAIN APP BOOT ===== */
       function bootApp() {

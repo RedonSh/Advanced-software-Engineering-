@@ -1,7 +1,7 @@
 /* =========================================================================
    common.js — core helpers for RecipeSite
    - Recipes: Supabase
-   - Favourites: localStorage + (if logged in) Supabase "favorites" table
+   - Favourites: localStorage + (if logged in) Supabase "user_favorites"
    - Pantry: localStorage (for now)
    ========================================================================= */
 
@@ -33,7 +33,7 @@ function saveFavSet(set) {
 }
 
 /**
- * Toggle favourite locally and (if logged in) in Supabase "favorites" table.
+ * Toggle favourite locally and (if logged in) in Supabase "user_favorites".
  * Returns: boolean = new favourited state.
  */
 async function toggleFav(recipeId) {
@@ -66,8 +66,8 @@ async function toggleFav(recipeId) {
           );
       }
     } catch (e) {
-      console.warn('[user_favorites] remote sync failed:', e?.message || e);
-      // We do NOT undo local change – UI should still feel responsive
+      console.warn('[favorites] remote sync failed:', e?.message || e);
+      // We do NOT undo the local change – UI should still feel responsive
     }
   }
 
@@ -88,7 +88,7 @@ function setCurrentUser(user) {
   if (currentUserId) {
     // User just logged in or session restored → sync favourites
     syncFavouritesFromRemote().catch(err => {
-      console.warn('[user_favorites] syncFavouritesFromRemote error:', err?.message || err);
+      console.warn('[favorites] syncFavouritesFromRemote error:', err?.message || err);
     });
   }
 }
@@ -110,7 +110,7 @@ async function syncFavouritesFromRemote() {
     .eq('user_id', currentUserId);
 
   if (error) {
-    console.warn('[user_favorites] fetch remote error:', error.message);
+    console.warn('[favorites] fetch remote error:', error.message);
     return;
   }
 
@@ -135,7 +135,7 @@ async function syncFavouritesFromRemote() {
           { onConflict: 'user_id,recipe_id', ignoreDuplicates: true }
         );
     } catch (e) {
-      console.warn('[user_favorites] upsert merged error:', e?.message || e);
+      console.warn('[favorites] upsert merged error:', e?.message || e);
     }
   }
 }
@@ -162,18 +162,34 @@ function initAuthFavouriteSync() {
   supabase.auth.getUser()
     .then(({ data, error }) => {
       if (error) {
-        console.warn('[user_favorites] getUser error:', error.message);
+        console.warn('[favorites] getUser error:', error.message);
         return;
       }
-      setCurrentUser(data?.user || null);
+      if (data?.user) {
+        // Logged-in session on page load
+        setCurrentUser(data.user);
+      }
     })
-    .catch(e => console.warn('[user_favorites] getUser catch:', e?.message || e));
+    .catch(e => console.warn('[favorites] getUser catch:', e?.message || e));
 
   // React to auth changes
-  supabase.auth.onAuthStateChange((_event, session) => {
-    setCurrentUser(session?.user || null);
+  supabase.auth.onAuthStateChange((event, session) => {
+    const user = session?.user || null;
+
+    if (event === 'SIGNED_OUT') {
+      // User explicitly logged out → clear user + local favourites
+      currentUserId = null;
+      saveFavSet(new Set());     // 👈 wipes fav_recipes in localStorage
+      return;
+    }
+
+    // For sign-in / token refresh / initial session with user
+    if (user) {
+      setCurrentUser(user);
+    }
   });
 }
+
 
 /* Start auth-favourites sync as soon as this file runs */
 initAuthFavouriteSync();
