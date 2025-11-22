@@ -8,9 +8,9 @@ The Recipe Website uses a client-side architecture supported by a cloud Backend-
 The system consists of:
 - A static front-end (HTML/CSS/JS) hosted on GitHub Pages.
 - A Supabase backend providing:
-- Authentication (email/password)
-- Real-time database (Postgres)
-- Image storage (Supabase Storage with public buckets)
+   - Authentication (email/password)
+   - Real-time database (Postgres)
+   - Image storage (Supabase Storage with public buckets)
 - Session management
 No custom server is required.
 
