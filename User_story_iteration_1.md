@@ -54,8 +54,6 @@ Total estimated effort for Iteration 1 user stories: **10.2 “days”** (relati
 
 ## Description
 
-You need to keep all versions here so that your instructor/marker can see your changes easily.  
-In a real project, your older versions could be viewed via commits.
 
 ### Description-v1 (before Iteration 1)
 
