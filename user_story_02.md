@@ -26,8 +26,20 @@ Description-v1: e.g. The web site will show current deals to Orion's orbits user
 
 ## Tasks, see chapter 4.
 
-1. Task 1, Estimation XX days
-2. ...
+#### Auth and Profile
+As a user, I can register and log in, so that my pantry, preferences, and saved recipes are secure and personalized. 
+
+As a user, I can set my dietary restrictions and nutrition goals (e.g., vegan, halal, low-sodium), so that the app only suggests recipes that fit my needs.
+
+#### Pantry Management
+- As a user, I can add, edit, or remove pantry items with quantity, unit, and expiry date, so that I know what ingredients I have at home.
+- As a user, I can see suggestions for commonly used pantry items, so that adding items is faster.
+- As a user, I want the app to highlight items that are expired or running low, so I avoid cooking failures and waste.
+
+#### Recipe Generation
+- As a user, I can generate recipes based on my pantry items and dietary constraints, so that I can cook meals with what I have.
+- As a user, I want recipes to indicate preparation time, servings, and steps, so that I can plan efficiently.
+- As a user, I want allergens flagged and dietary compliance enforced, so that I can safely follow my restrictions.
 
 
 # UI Design:
