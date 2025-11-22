@@ -9,79 +9,41 @@
   <link rel="stylesheet" href="css/login.css" />
 
   <style>
-    .alert {
-      margin-bottom: 12px;
-      padding: 10px 12px;
-      border-radius: 10px;
-      border: 1px solid #f97373;
-      background: #fef2f2;
-      color: #7f1d1d;
-      font-size: 0.9rem;
-    }
+    .alert { margin-bottom: 12px; padding: 10px 12px; border-radius: 10px; border: 1px solid #f97373; background: #fef2f2; color: #7f1d1d; font-size: 0.9rem; }
   </style>
 
-  <!-- Supabase env -->
   <script>
     window.ENV_SUPABASE_URL = 'https://bhqeasmtrdfqncliipki.supabase.co/';
     window.ENV_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJocWVhc210cmRmcW5jbGlpcGtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIwNzQ4NzgsImV4cCI6MjA3NzY1MDg3OH0.249y8yGBYKgcvnoKkdTft94Mu74kbO_Ioso2HFrTFpg';
   </script>
 
-  <!-- Supabase UMD -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"
-          onload="
-            try {
-              window.supabase = window.supabase.createClient(
-                window.ENV_SUPABASE_URL,
-                window.ENV_SUPABASE_KEY,
-                { auth:{ persistSession:true, autoRefreshToken:true } }
-              );
-              console.log('[supabase] reset page ready?', !!window.supabase);
-            } catch (e) { console.error('[supabase] init error on reset.html', e); }
-          "></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 </head>
 
 <body class="auth-body">
   <main class="auth-wrap">
     <div class="auth-card">
       <div class="auth-brand">
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path d="M8 3a1 1 0 0 0-1 1v2h10a1 1 0 1 1 0 2H7v2h8.5a3.5 3.5 0 1 1 0 7H12v2h4.5a5.5 5.5 0 0 0 0-11H6V4a1 1 0 0 1 1-1h1z"/>
-        </svg>
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 3a1 1 0 0 0-1 1v2h10a1 1 0 1 1 0 2H7v2h8.5a3.5 3.5 0 1 1 0 7H12v2h4.5a5.5 5.5 0 0 0 0-11H6V4a1 1 0 0 1 1-1h1z"/></svg>
         <span>RecipeSite</span>
       </div>
 
       <h1 id="resetTitle">Reset your password</h1>
-
       <div id="message" class="alert" hidden></div>
 
-      <!-- Step 1: request reset email -->
       <section id="stepRequest">
-        <p class="small muted">
-          Enter the email you used to sign up and we’ll send you a link to choose a new password.
-        </p>
+        <p class="small muted">Enter your email and we’ll send you a link to choose a new password.</p>
         <form id="requestForm" class="auth-form" novalidate>
-          <label class="field">
-            <span>Email</span>
-            <input id="resetEmail" type="email" required autocomplete="email" placeholder="you@example.com" />
-          </label>
+          <label class="field"><span>Email</span><input id="resetEmail" type="email" required placeholder="you@example.com" /></label>
           <button type="submit" class="btn full">Send reset link</button>
         </form>
       </section>
 
-      <!-- Step 2: set new password (after clicking email link) -->
       <section id="stepUpdate" hidden>
-        <p class="small muted">
-          Enter your new password below. This link only works once, so choose something you can remember.
-        </p>
-        <form id="resetForm" class="auth-form" novalidate>
-          <label class="field">
-            <span>New password</span>
-            <input id="newPw1" type="password" required autocomplete="new-password" placeholder="••••••••" />
-          </label>
-          <label class="field">
-            <span>Confirm new password</span>
-            <input id="newPw2" type="password" required autocomplete="new-password" placeholder="••••••••" />
-          </label>
+        <p class="small muted">Enter your new password below.</p>
+        <form id="updateForm" class="auth-form" novalidate>
+          <label class="field"><span>New password</span><input id="newPw1" type="password" required placeholder="At least 6 chars" /></label>
+          <label class="field"><span>Confirm password</span><input id="newPw2" type="password" required placeholder="Repeat password" /></label>
           <button type="submit" class="btn full">Update password</button>
         </form>
       </section>
@@ -94,133 +56,79 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const msgBox      = document.getElementById('message');
+      /* --- UI Helpers --- */
+      const msgBox = document.getElementById('message');
+      function showMsg(txt, err) {
+        msgBox.hidden=false; msgBox.textContent=txt;
+        msgBox.style.background=err?'#fef2f2':'#ecfdf5'; msgBox.style.color=err?'#7f1d1d':'#166534'; msgBox.style.borderColor=err?'#f97373':'#4ade80';
+      }
+      function clearMsg() { msgBox.hidden=true; msgBox.textContent=''; }
+
+      /* --- Initialize Supabase --- */
+      let supabase;
+      try {
+        supabase = window.supabase.createClient(window.ENV_SUPABASE_URL, window.ENV_SUPABASE_KEY, { 
+          auth: { persistSession: true, autoRefreshToken: true } 
+        });
+      } catch(e) { showMsg('Supabase init failed. Check console.', true); return; }
+
+      /* --- Logic --- */
       const stepRequest = document.getElementById('stepRequest');
       const stepUpdate  = document.getElementById('stepUpdate');
       const resetTitle  = document.getElementById('resetTitle');
 
-      const requestForm = document.getElementById('requestForm');
-      const resetEmail  = document.getElementById('resetEmail');
-
-      const resetForm   = document.getElementById('resetForm');
-      const newPw1      = document.getElementById('newPw1');
-      const newPw2      = document.getElementById('newPw2');
-
-      function showMessage(text, isError) {
-        if (!msgBox) return;
-        msgBox.hidden = false;
-        msgBox.textContent = text;
-        msgBox.style.borderColor = isError ? '#f97373' : '#4ade80';
-        msgBox.style.background = isError ? '#fef2f2' : '#ecfdf5';
-        msgBox.style.color = isError ? '#7f1d1d' : '#166534';
-      }
-
-      function clearMessage() {
-        if (!msgBox) return;
-        msgBox.hidden = true;
-        msgBox.textContent = '';
-      }
-
-      function switchToRequestMode() {
-        stepRequest.hidden = false;
-        stepUpdate.hidden  = true;
-        resetTitle.textContent = 'Reset your password';
-      }
-
-      function switchToUpdateMode() {
-        stepRequest.hidden = true;
-        stepUpdate.hidden  = false;
-        resetTitle.textContent = 'Choose a new password';
-      }
-
-      // Wait for Supabase client to be ready
-      const check = setInterval(() => {
-        if (window.supabase && supabase.auth) {
-          clearInterval(check);
-          init();
+      // 1. LISTEN for Auth State Changes (The most robust way)
+      supabase.auth.onAuthStateChange(async (event, session) => {
+        console.log('[Auth Event]', event);
+        
+        if (event === 'PASSWORD_RECOVERY') {
+          // User clicked the email link
+          stepRequest.hidden = true;
+          stepUpdate.hidden = false;
+          resetTitle.textContent = 'Choose a new password';
+        } 
+        else if (event === 'SIGNED_IN' && session) {
+          // If they are already signed in, allow password change too
+          stepRequest.hidden = true;
+          stepUpdate.hidden = false;
         }
-      }, 100);
+      });
 
-      async function init() {
-        clearMessage();
+      // 2. Handle "Send Link" Form
+      document.getElementById('requestForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        clearMsg();
+        const email = document.getElementById('resetEmail').value.trim();
+        if (!email) return showMsg('Please enter an email.', true);
 
-        // Do we already have a recovery session? (user clicked email link)
-        try {
-          const { data } = await supabase.auth.getSession();
-          const hasSession = !!data && !!data.session;
-          if (hasSession) {
-            switchToUpdateMode();
-          } else {
-            switchToRequestMode();
-          }
-        } catch (e) {
-          console.warn('getSession on reset page failed', e);
-          switchToRequestMode();
-        }
-
-        // STEP 1: request reset link
-        requestForm.addEventListener('submit', async (e) => {
-          e.preventDefault();
-          clearMessage();
-
-          const email = resetEmail.value.trim();
-          if (!email) {
-            showMessage('Please enter your email address.', true);
-            return;
-          }
-
-          try {
-            // redirect back to THIS page after user clicks the email link
-            const redirectTo = window.location.origin + window.location.pathname;
-            const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
-            if (error) throw error;
-            showMessage('Check your email for a link to reset your password.', false);
-          } catch (err) {
-            showMessage(err.message || 'Failed to send reset link.', true);
-          }
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          // IMPORTANT: This URL must be in your Supabase Dashboard -> Auth -> URL Configuration
+          redirectTo: window.location.href 
         });
 
-        // STEP 2: actually update password
-        resetForm.addEventListener('submit', async (e) => {
-          e.preventDefault();
-          clearMessage();
+        if (error) showMsg(error.message, true);
+        else showMsg('Check your email for the password reset link.', false);
+      });
 
-          const p1 = newPw1.value;
-          const p2 = newPw2.value;
+      // 3. Handle "Update Password" Form
+      document.getElementById('updateForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        clearMsg();
+        const p1 = document.getElementById('newPw1').value;
+        const p2 = document.getElementById('newPw2').value;
 
-          if (!p1 || !p2) {
-            showMessage('Please fill out both password fields.', true);
-            return;
-          }
-          if (p1 !== p2) {
-            showMessage('Passwords do not match.', true);
-            return;
-          }
-          if (p1.length < 6) {
-            showMessage('Password should be at least 6 characters long.', true);
-            return;
-          }
+        if (p1.length < 6) return showMsg('Password too short (min 6 chars).', true);
+        if (p1 !== p2) return showMsg('Passwords do not match.', true);
 
-          try {
-            const { data } = await supabase.auth.getSession();
-            if (!data || !data.session) {
-              showMessage('Reset link is invalid or has expired. Please request a new one.', true);
-              switchToRequestMode();
-              return;
-            }
+        const { error } = await supabase.auth.updateUser({ password: p1 });
 
-            const { error } = await supabase.auth.updateUser({ password: p1 });
-            if (error) throw error;
-
-            showMessage('Password updated successfully. Redirecting you to sign in…', false);
-            setTimeout(() => {
-              window.location.href = 'index.html';
-            }, 1200);
-          } catch (err) {
-            showMessage(err.message || 'Failed to update password.', true);
-          }
-        });
-      }
+        if (error) {
+          showMsg(error.message, true);
+        } else {
+          showMsg('Success! Redirecting to login...', false);
+          setTimeout(() => window.location.href = 'index.html', 2000);
+        }
+      });
     });
   </script>
 </body>
