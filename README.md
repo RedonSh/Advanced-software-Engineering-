@@ -32,16 +32,17 @@ In the second week, we divided tasks among team members, assigning specific area
 * Barcode scanning for item identification
 * Rating system for items
 
-**Key Features and Estimates (Planning Poker):**
+**Key Features - Estimates (Planning Poker) - Priority :**
 
-* Login Page – 1
-* Pantry Management – 3.6
-* Shopping List – 3
-* Recipe Generator – 5.6
-* Save Favorite Recipes – 3.8
-* Nutrition Facts – 2.8
-* Upload Your Own Recipes – 3.2
-* Categorization – 4
+* Login Page – 1 day - 1 ( Priority )
+* Pantry Management – 3.6 days - 2 ( Priority )
+* Shopping List – 3 days - 6 ( Priority )
+* Recipe Generator – 5.6 days - 3 ( Priority )
+* Save Favorite Recipes – 3.8 days - 5 ( Priority )
+* Nutrition Facts – 2.8 days - 4 ( Priority )
+* Upload Your Own Recipes – 3.2 days - 7 ( Priority )
+* AI & Trust – 4 days - 8 ( Priority )
+  
 
 Total: 27 days
 
@@ -102,7 +103,7 @@ Total: 21 days
 
 
 
-# Iteration 2, 30/10 - 12/11
+# Iteration 2, 30/10 - 20/11
 
 #### Week 7 (31/10 – 6/11)
 
@@ -143,16 +144,25 @@ Task 3 (Back End) marked completed – 20/11/25.
 
 Total: 21 days
 
-# Iteration 3, 13/11/25 - 26/11/25
+# Iteration 3, 21/11/25 - 30/11/25
 
-### Not enough time/developers: 
-1. [user story title](./user_stories/user_story_01_title.md), priority XX, YY days 
-2. ...
+#### Week 10 (21/11 - 30/11)
+Iteration 3 officially started, focused on the AI & Trust user stories and finishing the remaining backend work.
 
-Total: YY days
+Finalised the remaining Supabase endpoints for share read scopes, write operations for shopping list updates, and AI swap preview calls. Hardened Row-Level Security (RLS) so that shared links are strictly read-only and scoped by user and expiry token, and added logging around key flows (Save, Share, Swap) to support debugging and observability.
+
+Implemented “Why this swap?” explanations that show the key nutritional changes (calories, protein, carbs, fats) and simple reasoning labels such as “Lower sugar” or “Higher fibre”. Updated the Recipe Detail and Swap UI to clearly distinguish estimated vs. verified values with tooltips and a short info message so users understand how accurate the data is.
+
+Added Trust & Feedback UX on AI suggestions: quick thumbs up/down controls and options such as “Not suitable for me” and “Allergy risk”, plus guardrail messages encouraging users to check labels or medical advice. Also handled AI error states and timeouts more gracefully so that if an AI call fails, the app still shows a clear message instead of breaking the flow.
+
+Started a stretch task on personalisation: wired feedback events (thumbs up/down) into analytics so future iterations can re-rank suggestions based on user preferences. Due to limited time in Iteration 3, only basic event tracking was completed; the actual personalised re-ranking logic was moved to the backlog.
+
+
+Total: 10 days
 
 # Actual iterations
 1. Iteration 1: [(https://github.com/RedonSh/Advanced-software-Engineering-/blob/main/iteration_1.md](https://github.com/RedonSh/Advanced-software-Engineering-/blob/main/iteration_1.md)
-2. [Iteration-2](./iteration_2.md)
+2. Iteration 2: [(https://github.com/RedonSh/Advanced-software-Engineering-/blob/main/iteration_2.md](https://github.com/RedonSh/Advanced-software-Engineering-/blob/main/iteration_2.md)
+3. Iteration 3: [(https://github.com/RedonSh/Advanced-software-Engineering-/blob/main/iteration_3.md](https://github.com/RedonSh/Advanced-software-Engineering-/blob/main/iteration_3.md)
 
 
