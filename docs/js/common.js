@@ -1,5 +1,8 @@
 /* =========================================================================
-   common.js — Core helpers for RecipeSite
+   common.js — core helpers for RecipeSite
+   - Recipes: Supabase
+   - Favourites: localStorage + (if logged in) Supabase "favorites" table
+   - Pantry: localStorage (for now)
    ========================================================================= */
 
 const $$  = (s, c=document)=>c.querySelector(s);
@@ -25,6 +28,10 @@ function saveFavSet(set) {
   localStorage.setItem(FAV_KEY, JSON.stringify([...set])); 
 }
 
+/**
+ * Toggle favourite locally and (if logged in) in Supabase "favorites" table.
+ * Returns: boolean = new favourited state.
+ */
 async function toggleFav(recipeId) {
   const id = String(recipeId);
   const favs = getFavSet();
@@ -50,8 +57,9 @@ async function toggleFav(recipeId) {
             { onConflict: 'user_id,recipe_id', ignoreDuplicates: true }
           );
       }
-    } catch (e) { 
-      console.warn('Sync error', e); 
+    } catch (e) {
+      console.warn('[user_favorites] remote sync failed:', e?.message || e);
+      // We do NOT undo local change – UI should still feel responsive
     }
   }
   return !wasFav;
@@ -63,9 +71,22 @@ function setCurrentUser(user) {
   if (newId === currentUserId) return;
   
   currentUserId = newId;
-  if (currentUserId) syncFavouritesFromRemote();
+
+  if (currentUserId) {
+    // User just logged in or session restored → sync favourites
+    syncFavouritesFromRemote().catch(err => {
+      console.warn('[user_favorites] syncFavouritesFromRemote error:', err?.message || err);
+    });
+  }
 }
 
+/**
+ * Sync favourites when a user logs in:
+ * 1. Load remote favourites from Supabase
+ * 2. Merge with local favourites
+ * 3. Save merged set to localStorage
+ * 4. Upsert any local-only favourites back to Supabase
+ */
 async function syncFavouritesFromRemote() {
   if (!currentUserId || !window.supabase) return;
   
@@ -73,25 +94,46 @@ async function syncFavouritesFromRemote() {
   const { data } = await supabase.from('user_favorites')
     .select('recipe_id')
     .eq('user_id', currentUserId);
-    
-  const remoteSet = new Set((data || []).map(r => String(r.recipe_id)));
-  const localSet = getFavSet();
-  
-  // Merge both
+
+  if (error) {
+    console.warn('[user_favorites] fetch remote error:', error.message);
+    return;
+  }
+
+  const remoteSet = new Set((data || []).map(row => String(row.recipe_id)));
+  const localSet  = getFavSet();
+
+  // 2. Merge
   const merged = new Set([...localSet, ...remoteSet]);
   saveFavSet(merged);
   
   // Upload any local ones that weren't in the cloud
   const toInsert = [...merged].filter(id => !remoteSet.has(id));
   if (toInsert.length) {
-    await supabase.from('user_favorites')
-      .upsert(
-        toInsert.map(id => ({ user_id: currentUserId, recipe_id: id })), 
-        { ignoreDuplicates: true }
-      );
+    try {
+      await supabase
+        .from('user_favorites')
+        .upsert(
+          toInsert.map(id => ({
+            user_id: currentUserId,
+            recipe_id: id
+          })),
+          { onConflict: 'user_id,recipe_id', ignoreDuplicates: true }
+        );
+    } catch (e) {
+      console.warn('[user_favorites] upsert merged error:', e?.message || e);
+    }
   }
 }
 
+/**
+ * Initialise auth listener once, so we know which user is logged in and can
+ * sync favourites for them.
+ *
+ * This runs on ANY page that:
+ *  - includes Supabase
+ *  - and loads this common.js
+ */
 function initAuthFavouriteSync() {
   // Wait for Supabase to load
   if (!window.supabase) { 
@@ -101,13 +143,25 @@ function initAuthFavouriteSync() {
   if (authSyncStarted) return;
   
   authSyncStarted = true;
-  
-  // Check session now
-  supabase.auth.getUser().then(({ data }) => setCurrentUser(data?.user)).catch(()=>{});
-  
-  // Listen for login/logout
-  supabase.auth.onAuthStateChange((_e, session) => setCurrentUser(session?.user));
+
+  // Initial user (if already logged in)
+  supabase.auth.getUser()
+    .then(({ data, error }) => {
+      if (error) {
+        console.warn('[user_favorites] getUser error:', error.message);
+        return;
+      }
+      setCurrentUser(data?.user || null);
+    })
+    .catch(e => console.warn('[user_favorites] getUser catch:', e?.message || e));
+
+  // React to auth changes
+  supabase.auth.onAuthStateChange((_event, session) => {
+    setCurrentUser(session?.user || null);
+  });
 }
+
+/* Start auth-favourites sync as soon as this file runs */
 initAuthFavouriteSync();
 
 /* -------------------------------------------------------------------------

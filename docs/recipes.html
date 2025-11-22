@@ -78,11 +78,10 @@
         }
       }
 
-      supabase.auth.onAuthStateChange((_event, session) => { updateAuthUI(session); });
-      (async () => {
-        const { data } = await supabase.auth.getSession();
-        updateAuthUI(data.session || null);
-      })();
+      // Listen for auth changes (no redirect for guests)
+      supabase.auth.onAuthStateChange((_event, session) => {
+        updateAuthUI(session || null);
+      });
 
       /* =====  APP BOOT FUNCTION  ===== */
       function bootApp() {
