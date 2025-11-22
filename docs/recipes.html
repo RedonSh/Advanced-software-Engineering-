@@ -8,37 +8,158 @@
   <link rel="stylesheet" href="css/base.css" />
   <link rel="stylesheet" href="css/recipes.css" />
 
+  <!-- Supabase env -->
   <script>
     window.ENV_SUPABASE_URL = 'https://bhqeasmtrdfqncliipki.supabase.co/';
     window.ENV_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJocWVhc210cmRmcW5jbGlpcGtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIwNzQ4NzgsImV4cCI6MjA3NzY1MDg3OH0.249y8yGBYKgcvnoKkdTft94Mu74kbO_Ioso2HFrTFpg';
   </script>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"
-          onload="
-            try {
-              window.supabase = window.supabase.createClient(
-                window.ENV_SUPABASE_URL,
-                window.ENV_SUPABASE_KEY,
-                { auth:{ persistSession:true, autoRefreshToken:true } }
-              );
-              console.log('[supabase] ready?', !!window.supabase);
-            } catch(e) { console.error('[supabase] init error', e); }
-          "></script>
-  
+  <!-- Supabase client -->
+  <script
+    src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"
+    onload="
+      try {
+        window.supabase = window.supabase.createClient(
+          window.ENV_SUPABASE_URL,
+          window.ENV_SUPABASE_KEY,
+          { auth:{ persistSession:true, autoRefreshToken:true } }
+        );
+        console.log('[supabase] ready?', !!window.supabase);
+      } catch(e) { console.error('[supabase] init error', e); }
+    "
+  ></script>
+
+  <!-- Shared helpers (RecipeSite.*) -->
   <script defer src="js/common.js"></script>
 
   <style>
-    .site-head{position:sticky;top:0;z-index:50;backdrop-filter:saturate(120%) blur(6px);
-      background:color-mix(in oklab,var(--card,#fff),transparent 15%);border-bottom:1px solid #0001}
-    .site-head .wrap{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding-block:10px}
-    .brand{display:flex;gap:10px;align-items:center;font-weight:700;text-decoration:none;color:inherit}
-    .nav{display:flex;gap:12px;flex-wrap:wrap}
-    .nav a{padding:6px 10px;border-radius:999px;text-decoration:none;color:inherit;border:1px solid transparent}
-    .nav a[aria-current="page"]{background:color-mix(in oklab,var(--accent,#16a34a),white 85%);border-color:#00000010}
-    .head-search{flex:1;min-width:220px;max-width:480px}
-    .head-search input{width:100%}
-    .alert{margin:12px 0;padding:10px 12px;border:1px solid #e11;border-radius:10px;background:#fee; color:#700}
-    .noimg-badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#f3f4f6;color:#64748b;font-size:.8rem}
+    .site-head{
+      position:sticky;
+      top:0;
+      z-index:50;
+      backdrop-filter:saturate(120%) blur(6px);
+      background:color-mix(in oklab,var(--card,#fff),transparent 15%);
+      border-bottom:1px solid #0001;
+    }
+    .site-head .wrap{
+      display:flex;
+      gap:16px;
+      align-items:center;
+      justify-content:space-between;
+      flex-wrap:wrap;
+      padding-block:10px;
+    }
+    .brand{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      font-weight:700;
+      text-decoration:none;
+      color:inherit;
+    }
+    .nav{
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+    .nav a{
+      padding:6px 10px;
+      border-radius:999px;
+      text-decoration:none;
+      color:inherit;
+      border:1px solid transparent;
+    }
+    .nav a[aria-current="page"]{
+      background:color-mix(in oklab,var(--accent,#16a34a),white 85%);
+      border-color:#00000010;
+    }
+    .head-search{
+      flex:1;
+      min-width:220px;
+      max-width:480px;
+    }
+    .head-search input{
+      width:100%;
+    }
+    .alert{
+      margin:12px 0;
+      padding:10px 12px;
+      border:1px solid #e11;
+      border-radius:10px;
+      background:#fee;
+      color:#700;
+    }
+    .noimg-badge{
+      display:inline-block;
+      padding:4px 8px;
+      border-radius:999px;
+      background:#f3f4f6;
+      color:#64748b;
+      font-size:.8rem;
+    }
+
+    /* Pantry enhancements */
+    .pantry-layout{
+      display:grid;
+      grid-template-columns:300px 1fr;
+      gap:24px;
+      align-items:flex-start;
+    }
+    @media (max-width:900px){
+      .pantry-layout{grid-template-columns:1fr;}
+    }
+
+    .pantry-chips{
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+      margin:8px 0 12px;
+    }
+    .pantry-chip{
+      border-radius:999px;
+      border:1px solid #e5e7eb;
+      padding:3px 9px;
+      font-size:0.8rem;
+      background:#f9fafb;
+      cursor:pointer;
+    }
+    .pantry-chip:hover{
+      background:#eef2ff;
+    }
+
+    .pantry-summary{
+      font-size:0.85rem;
+      color:#6b7280;
+      margin-bottom:6px;
+    }
+
+    .pantry-card{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid #e5e7eb;
+      background:#ffffff;
+      box-shadow:0 6px 14px rgba(15,23,42,0.06);
+    }
+    .pantry-card-header{
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .pantry-card-title{
+      font-weight:600;
+      margin:0;
+    }
+    .pantry-card-meta{
+      font-size:0.85rem;
+      color:#6b7280;
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:2px;
+    }
   </style>
 
   <script>
@@ -48,16 +169,13 @@
       const alertBox = document.getElementById('alert');
       const showAlert = (msg) => { alertBox.textContent = msg; alertBox.hidden = false; };
       const hideAlert = () => { alertBox.hidden = true; alertBox.textContent = ''; };
-      
-      let appBooted = false;
 
-      /* ===== AUTH / HEADER UI (BUT NO HARD GATE) ===== */
+      /* ===== AUTH UI (OPTIONAL) ===== */
       function updateAuthUI(session) {
         const authContainer = document.querySelector('header .auth');
         if (!authContainer) return;
 
         if (!session) {
-          // Guest mode: show "Sign in" link, but DO NOT redirect.
           const next = encodeURIComponent('recipes.html' + location.search + location.hash);
           authContainer.innerHTML = `
             <a class="btn small outline" href="index.html?next=${next}">Sign in</a>
@@ -69,46 +187,49 @@
             <span style="font-size: 0.9rem; margin-right: 12px;">Hi, ${displayName}</span>
             <button class="btn small outline" id="logoutButton">Logout</button>
           `;
-          authContainer.querySelector('#logoutButton').addEventListener('click', async () => {
-            await supabase.auth.signOut();
-          });
-        }
-
-        if (!appBooted) {
-          appBooted = true;
-          bootApp();
+          const logoutBtn = authContainer.querySelector('#logoutButton');
+          if (logoutBtn) {
+            logoutBtn.addEventListener('click', async () => {
+              try {
+                await supabase.auth.signOut();
+              } catch (e) {
+                console.error('signOut error', e);
+              }
+            });
+          }
         }
       }
 
-      // Listen for auth changes, but never kick guests out
+      // Listen for auth changes (no redirect for guests)
       supabase.auth.onAuthStateChange((_event, session) => {
-        updateAuthUI(session);
+        updateAuthUI(session || null);
       });
 
-      // Also grab initial session explicitly (in case)
-      (async () => {
-        const { data } = await supabase.auth.getSession();
-        updateAuthUI(data.session || null);
-      })();
-
-      /* =====  APP BOOT FUNCTION  ===== */
+      /* ===== MAIN APP BOOT ===== */
       function bootApp() {
-        /* Router */
+        /* ---------- Router ---------- */
         const sections = [...document.querySelectorAll('section.route')];
         const tabs = [...document.querySelectorAll('header .nav a')];
+
         function setActive(hash){
-          const route = (hash||'#browse').replace('#','');
-          sections.forEach(s => s.hidden = s.dataset.route !== route);
-          tabs.forEach(a => a.setAttribute('aria-current', a.getAttribute('href') === '#'+route ? 'page':'false'));
-          if (route==='favourites') renderFavourites();
-          if (route==='generator')  bootGenerator();
-          if (route==='pantry')     bootPantry();
+          const route = (hash || '#browse').replace('#','');
+          sections.forEach(s => { s.hidden = s.dataset.route !== route; });
+          tabs.forEach(a => {
+            a.setAttribute(
+              'aria-current',
+              a.getAttribute('href') === '#'+route ? 'page' : 'false'
+            );
+          });
+          if (route === 'favourites') renderFavourites();
+          if (route === 'generator')  bootGenerator();
+          if (route === 'pantry')     bootPantry();
         }
-        window.addEventListener('hashchange', ()=>setActive(location.hash));
+
+        window.addEventListener('hashchange', () => setActive(location.hash));
         if (!location.hash) location.hash = '#browse';
         setActive(location.hash);
 
-        /* ===== Browse ===== */
+        /* ---------- Browse ---------- */
         const state = { all: [], filtered: [], page:1, pageSize:12 };
         const grid = document.getElementById('browseGrid');
         const qInput = document.getElementById('searchInput');
@@ -141,7 +262,10 @@
         }
 
         function renderGrid(items){
-          if (!items.length) { grid.innerHTML = '<p class="muted">No recipes found.</p>'; return; }
+          if (!items.length) {
+            grid.innerHTML = '<p class="muted">No recipes found.</p>';
+            return;
+          }
           grid.innerHTML = items.map(cardHTML).join('');
           grid.querySelectorAll('[data-fav]').forEach(btn=>{
             btn.addEventListener('click', async (e)=>{
@@ -215,7 +339,7 @@
         
         bootBrowse();
 
-        /* ===== Generator ===== */
+        /* ---------- Generator ---------- */
         let genBooted=false;
         async function bootGenerator(){
           if (genBooted) return; genBooted=true;
@@ -261,63 +385,188 @@
           generate(9);
         }
 
-        /* ===== Pantry ===== */
-        let pantryBooted=false;
-        function bootPantry(){
-          if (pantryBooted) return; pantryBooted=true;
-          const listEl=document.getElementById('pantryList');
-          const nameEl=document.getElementById('pantryName');
-          const qtyEl=document.getElementById('pantryQty');
-          const expEl=document.getElementById('pantryExpiry');
-          const addBtn=document.getElementById('addPantryBtn');
-          let editIndex=null;
+        /* ---------- Pantry ---------- */
+        let pantryBooted = false;
+        function bootPantry() {
+          if (pantryBooted) return;
+          pantryBooted = true;
 
-          function render(){
-            const items=RecipeSite.pantryList();
-            listEl.innerHTML='';
-            if(!items.length){ listEl.innerHTML='<p class="muted">Your pantry is empty.</p>'; return; }
-            items.forEach((it,idx)=>{
-              const card=document.createElement('article'); card.className='card';
-              card.innerHTML=`
-                <div class="row">
-                  <h3 style="margin:0">${it.name}</h3>
-                  <div class="row" style="gap:6px;margin-left:auto">
-                    <button class="btn small outline" data-edit="${idx}">Edit</button>
-                    <button class="btn small outline" data-del="${idx}">Remove</button>
-                  </div>
-                </div>
-                <p>Quantity: ${it.quantity}</p>
-                <p>Expiry: ${it.expiry || 'N/A'}</p>`;
-              card.querySelector('[data-del]').onclick=()=>{
-                const items=RecipeSite.pantryList(); items.splice(idx,1);
-                localStorage.setItem('pantry', JSON.stringify(items)); render(); reset();
-              };
-              card.querySelector('[data-edit]').onclick=()=>{
-                nameEl.value=it.name; qtyEl.value=it.quantity; expEl.value=it.expiry||'';
-                editIndex=idx; addBtn.textContent='Save Changes';
-              };
+          const listEl   = document.getElementById('pantryList');
+          const quickEl  = document.getElementById('pantryQuick');
+          const nameEl   = document.getElementById('pantryName');
+          const qtyEl    = document.getElementById('pantryQty');
+          const expEl    = document.getElementById('pantryExpiry');
+          const addBtn   = document.getElementById('addPantryBtn');
+          const clearBtn = document.getElementById('clearPantryForm');
+
+          let editIndex = null;
+
+          const quickItems = [
+            'Flour','Sugar','Brown sugar','Salt','Pepper',
+            'Olive oil','Butter','Eggs','Milk','Rice',
+            'Pasta','Bread','Tomato paste','Canned tomatoes',
+            'Kidney beans','Chickpeas','Tuna','Onions','Garlic',
+            'Carrots','Potatoes'
+          ];
+
+          function expiryLabel(exp) {
+            if (!exp) return 'No expiry set';
+            const today = new Date();
+            const d = new Date(exp + 'T00:00:00');
+            if (Number.isNaN(d.getTime())) return 'Expiry: ' + exp;
+            const diffDays = Math.floor((d - today) / (1000 * 60 * 60 * 24));
+            if (diffDays < 0) return `Expired ${Math.abs(diffDays)} day${Math.abs(diffDays) === 1 ? '' : 's'} ago`;
+            if (diffDays === 0) return 'Expires today';
+            if (diffDays === 1) return 'Expires tomorrow';
+            return `Expires in ${diffDays} days`;
+          }
+
+          function renderQuick() {
+            if (!quickEl) return;
+            quickEl.innerHTML = '';
+            quickItems.forEach(name => {
+              const btn = document.createElement('button');
+              btn.type = 'button';
+              btn.className = 'pantry-chip';
+              btn.textContent = name;
+              btn.addEventListener('click', () => {
+                nameEl.value = name;
+                if (!qtyEl.value) qtyEl.value = '1';
+                nameEl.focus();
+              });
+              quickEl.appendChild(btn);
+            });
+          }
+
+          function renderList() {
+            const items = RecipeSite.pantryList();
+            listEl.innerHTML = '';
+            if (!items.length) {
+              listEl.innerHTML = '<p class="muted">Your pantry is empty.</p>';
+              return;
+            }
+
+            const summary = document.createElement('div');
+            summary.className = 'pantry-summary';
+            summary.textContent = `You have ${items.length} item${items.length === 1 ? '' : 's'} in your pantry.`;
+            listEl.appendChild(summary);
+
+            items.forEach((it, idx) => {
+              const card = document.createElement('article');
+              card.className = 'pantry-card';
+
+              const header = document.createElement('div');
+              header.className = 'pantry-card-header';
+
+              const title = document.createElement('h3');
+              title.className = 'pantry-card-title';
+              title.textContent = it.name;
+
+              const buttonRow = document.createElement('div');
+              buttonRow.className = 'row';
+              buttonRow.style.marginLeft = 'auto';
+              buttonRow.style.gap = '6px';
+
+              const editBtn = document.createElement('button');
+              editBtn.type = 'button';
+              editBtn.className = 'btn small outline';
+              editBtn.textContent = 'Edit';
+
+              const delBtn = document.createElement('button');
+              delBtn.type = 'button';
+              delBtn.className = 'btn small outline';
+              delBtn.textContent = 'Remove';
+
+              editBtn.addEventListener('click', () => {
+                nameEl.value = it.name;
+                qtyEl.value = it.quantity;
+                expEl.value = it.expiry || '';
+                editIndex = idx;
+                addBtn.textContent = 'Save Changes';
+              });
+
+              delBtn.addEventListener('click', () => {
+                if (!confirm('Remove this ingredient from your pantry?')) return;
+                RecipeSite.pantryDelete(idx);
+                editIndex = null;
+                resetForm();
+                renderList();
+              });
+
+              buttonRow.appendChild(editBtn);
+              buttonRow.appendChild(delBtn);
+
+              header.appendChild(title);
+              header.appendChild(buttonRow);
+
+              const meta = document.createElement('div');
+              meta.className = 'pantry-card-meta';
+              const qtySpan = document.createElement('span');
+              qtySpan.textContent = 'Quantity: ' + (it.quantity || '-');
+              const expSpan = document.createElement('span');
+              expSpan.textContent = expiryLabel(it.expiry);
+              meta.appendChild(qtySpan);
+              meta.appendChild(expSpan);
+
+              card.appendChild(header);
+              card.appendChild(meta);
               listEl.appendChild(card);
             });
           }
-          function reset(){ nameEl.value=''; qtyEl.value=''; expEl.value=''; editIndex=null; addBtn.textContent='Add Ingredient'; }
-          addBtn.addEventListener('click', ()=>{
-            const name=nameEl.value.trim(), quantity=qtyEl.value.trim(), expiry=expEl.value;
-            if(!name||!quantity){ alert('Please enter ingredient name and quantity.'); return; }
-            const items=RecipeSite.pantryList();
-            if(editIndex!==null) items[editIndex]={name,quantity,expiry}; else items.push({name,quantity,expiry});
-            localStorage.setItem('pantry', JSON.stringify(items)); render(); reset();
+
+          function resetForm() {
+            nameEl.value = '';
+            qtyEl.value = '';
+            expEl.value = '';
+            editIndex = null;
+            addBtn.textContent = 'Add Ingredient';
+          }
+
+          addBtn.addEventListener('click', () => {
+            const name = nameEl.value.trim();
+            const quantity = qtyEl.value.trim();
+            const expiry = expEl.value;
+
+            if (!name || !quantity) {
+              alert('Please enter ingredient name and quantity.');
+              return;
+            }
+
+            const item = { name, quantity, expiry };
+
+            if (editIndex !== null) {
+              RecipeSite.pantryUpdate(editIndex, item);
+            } else {
+              RecipeSite.pantryAdd(item);
+            }
+
+            resetForm();
+            renderList();
           });
-          render();
+
+          if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+              resetForm();
+            });
+          }
+
+          // Initial render
+          renderQuick();
+          renderList();
         }
 
-        /* ===== Favourites ===== */
+        /* ---------- Favourites ---------- */
         async function renderFavourites(){
-          const grid=document.getElementById('favGrid'); grid.innerHTML='<p class="muted">Loading…</p>';
+          const grid=document.getElementById('favGrid');
+          grid.innerHTML='<p class="muted">Loading…</p>';
           try{
             const ids=[...RecipeSite.getFavSet()];
             const all=await RecipeSite.listRecipes();
             const favs=all.filter(r=>ids.includes(r.id));
-            if(!favs.length){ grid.innerHTML='<p class="muted">No favourites yet.</p>'; return; }
+            if(!favs.length){
+              grid.innerHTML='<p class="muted">No favourites yet.</p>';
+              return;
+            }
             grid.innerHTML=favs.map(cardHTML).join('');
             grid.querySelectorAll('[data-unfav],[data-fav]').forEach(btn=>{
               const id = btn.getAttribute('data-unfav') || btn.getAttribute('data-fav');
@@ -327,14 +576,29 @@
                 if(!grid.children.length) grid.innerHTML='<p class="muted">No favourites.</p>';
               });
             });
-          }catch(e){ showAlert('Favourites: '+e.message); grid.innerHTML=''; }
+          }catch(e){
+            showAlert('Favourites: '+e.message);
+            grid.innerHTML='';
+          }
         }
       } // end bootApp
+
+      // Get initial session once, then boot app
+      (async () => {
+        try {
+          const { data } = await supabase.auth.getSession();
+          updateAuthUI(data.session || null);
+        } catch (e) {
+          console.warn('getSession failed', e);
+          updateAuthUI(null);
+        }
+        bootApp();
+      })();
     } // end startAppLogic
 
     // Wait for Supabase to be ready, then start
     const checkSupabase = setInterval(() => {
-      if (window.supabase) {
+      if (window.supabase && supabase.auth) {
         clearInterval(checkSupabase);
         startAppLogic();
       }
@@ -428,17 +692,37 @@
 
     <section class="route" data-route="pantry" hidden>
       <h1>My Pantry</h1>
-      <div class="pantry-layout" style="display: grid; grid-template-columns: 300px 1fr; gap: 24px;">
+      <div class="pantry-layout">
         <aside class="card">
           <h3>Add to Pantry</h3>
+          <p class="muted small" style="margin-top:4px;">
+            Tap a common ingredient or type your own, then adjust the quantity and expiry.
+          </p>
+
+          <!-- Quick list of common items -->
+          <div id="pantryQuick" class="pantry-chips"></div>
+
           <form id="pantryForm">
-            <label class="field"><span>Name</span><input id="pantryName" type="text" required /></label>
-            <label class="field"><span>Quantity</span><input id="pantryQty" type="text" required /></label>
-            <label class="field"><span>Expiry</span><input id="pantryExpiry" type="date" /></label>
-            <button id="addPantryBtn" class="btn full" type="button">Add Ingredient</button>
+            <label class="field">
+              <span>Name</span>
+              <input id="pantryName" type="text" required />
+            </label>
+            <label class="field">
+              <span>Quantity</span>
+              <input id="pantryQty" type="text" required placeholder="e.g. 1 kg / 2 cups" />
+            </label>
+            <label class="field">
+              <span>Expiry</span>
+              <input id="pantryExpiry" type="date" />
+            </label>
+            <div class="row" style="margin-top:10px;justify-content:flex-end;gap:8px;">
+              <button id="clearPantryForm" class="btn outline" type="button">Clear</button>
+              <button id="addPantryBtn" class="btn" type="button">Add Ingredient</button>
+            </div>
           </form>
         </aside>
-        <div id="pantryList" style="display: flex; flex-direction: column; gap: 16px;">
+
+        <div id="pantryList" style="display:flex;flex-direction:column;gap:12px;">
           <p class="muted">Your pantry is empty.</p>
         </div>
       </div>
