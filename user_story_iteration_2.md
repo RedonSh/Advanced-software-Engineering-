@@ -139,24 +139,12 @@ Deep AI & Trust features (clear explanations, feedback, guardrails) are planned 
   - Health tags chips/badges on recipe cards and search results.
   - Inline Healthy Swap suggestions inside the recipe, with an option to apply a swap.
 
-<img width="854" height="594" alt="image" src="https://github.com/user-attachments/assets/ea7865c2-0413-47cf-9edf-7aa25caf3994" />
-<img width="854" height="641" alt="image" src="https://github.com/user-attachments/assets/8149ac88-0205-4610-a904-853ef76bec7d" />
 
 ---
 
 # Completed (Iteration 2)
 
-Insert screenshots / evidence for:
+<img width="854" height="594" alt="image" src="https://github.com/user-attachments/assets/ea7865c2-0413-47cf-9edf-7aa25caf3994" />
+<img width="854" height="641" alt="image" src="https://github.com/user-attachments/assets/8149ac88-0205-4610-a904-853ef76bec7d" />
 
-- **Shopping List 2.0**:
-  - Before and after: old simple list vs new aggregated/normalised list.
-- **Save & Share**:
-  - Recipe with a favourite icon and then visible under “Favourites”.
-  - A shared-link view (read-only) if available.
-- **Nutrition & Healthy Swap**:
-  - Recipe Details showing nutrition summary and health tags.
-  - Example of a Healthy Swap suggestion applied to a recipe.
 
-Also note in your report / captions:
-
-- **AI & Trust (Priority 8)** is **not yet complete** in Iteration 2 – it is intentionally moved to Iteration 3.
