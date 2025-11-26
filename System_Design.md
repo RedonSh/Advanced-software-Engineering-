@@ -125,4 +125,60 @@ Uses Email + Password provider.
    - refresh token
 5. Tokens are stored automatically by Supabase
 6. User session persists across refreshes
- 
+
+### 3.2. Supabase Storage (Images)
+A public bucket (recipe-images) stores the recipe thumbnails/photos.
+
+The design:
+- Public bucket → no authentication needed to view images
+- Each file has a public URL
+- Front-end stores these URLs inside recipe objects or database rows
+- Recipe cards load images directly from Supabase CDN
+This provides fast global image delivery.
+
+### Database (Optional Enhancements)
+While the current site uses a static RECIPES array inside common.js, the system is designed so that recipes can be stored in a Supabase Postgres table later.
+
+A future recipes table may include:
+
+| Column      | Type      | Description                 |
+| ----------- | --------- | --------------------------- |
+| id          | text/uuid | Recipe identifier           |
+| title       | text      | Recipe name                 |
+| category    | text      | Breakfast/Lunch/Dinner      |
+| ingredients | json      | List of ingredients         |
+| steps       | json      | Cooking instructions        |
+| nutrition   | json      | Nutrition facts             |
+| image_url   | text      | Public Supabase Storage URL |
+
+Then frontend will use:
+supabase.from('recipes').select('*')
+
+## 4. Deployment Design
+- Hosted on GitHub Pages under the docs/ directory.
+- No server required.
+- Supabase handles all cloud functions.
+- Deployment flow:
+   1. Developer pushes code to GitHub
+   2. GitHub Pages auto-deploys
+   3. Users access static website served from CDN
+   4. JavaScript interacts with Supabase APIs live
+
+## 5. Component Relationship Diagram (Text Version)
+
+                 ┌─────────────────────────┐          
+                 │     User’s Browser      │
+                 │  HTML / CSS / JS (SPA)  │
+                 └───────────┬────────────┘
+                             │
+                             ▼
+                   ┌──────────────────┐
+                   │ Supabase Client   │
+                   │ (in supabaseClient.js) */
+                   └──────────┬───────┘
+         ┌────────────────────┼────────────────────┐
+         ▼                    ▼                    ▼
+ ┌─────────────┐     ┌────────────────┐     ┌────────────────┐
+ │Auth System  │     │Database (SQL)  │     │Storage (Images)│
+ │Email Login  │     │Recipes, Favs   │     │Images/Thumbnails│
+ └─────────────┘     └────────────────┘     └────────────────┘
