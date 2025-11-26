@@ -12,6 +12,14 @@
 
 # Project planning BEFORE iteration-1, (see chapters 1-3)
 
+<img width="1482" height="253" alt="image" src="https://github.com/user-attachments/assets/80d9e5f5-8933-42fd-8ced-5b0be1534414" />
+
+<img width="1644" height="224" alt="image" src="https://github.com/user-attachments/assets/3197d362-9b26-4fad-8446-4bb79565c3f1" />
+
+<img width="1591" height="495" alt="image" src="https://github.com/user-attachments/assets/5c83820f-b851-49ce-9003-a78b144ddda8" />
+<img width="1762" height="545" alt="image" src="https://github.com/user-attachments/assets/ec821325-4dae-4d6a-84d5-33f1f62fd735" />
+
+
 #### Week 1
  From the first week, after forming our team, we began searching for a stakeholder to develop a website. We found one and conducted an interview with him, during which he expressed interest in creating a recipe website. Based on the interview, we developed user stories that helped us identify key features such as a login page, pantry management system, shopping list, recipe suggestions based on available pantry items, an option to save favorite recipes, and features showing nutrition facts and personalized recommendations. 
 
