@@ -13,20 +13,42 @@
   </script>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"
-          onload="window.supabase = window.supabase.createClient(ENV_SUPABASE_URL, ENV_SUPABASE_KEY, {auth:{persistSession:true, autoRefreshToken:true}})"></script>
+          onload="
+            try {
+              window.supabase = window.supabase.createClient(
+                window.ENV_SUPABASE_URL,
+                window.ENV_SUPABASE_KEY,
+                { auth:{ persistSession:true, autoRefreshToken:true } }
+              );
+            } catch(e) { console.error('[supabase] init error', e); }
+          "></script>
 
-  <script src="js/common.js" defer></script>
+  <script src="js/common.js"></script>
 </head>
 <body>
   <header class="site-head">
-    <div class="container">
-      <nav class="nav"><a href="recipes.html#browse">← Back to Recipes</a></nav>
+    <div class="container wrap">
+      <a href="recipes.html#browse" class="brand">
+        <svg viewBox="0 0 24 24" fill="currentColor" style="width:22px;height:22px;" aria-hidden="true">
+          <path d="M8 3a1 1 0 0 0-1 1v2h10a1 1 0 1 1 0 2H7v2h8.5a3.5 3.5 0 1 1 0 7H12v2h4.5a5.5 5.5 0 0 0 0-11H6V4a1 1 0 0 1 1-1h1z"/>
+        </svg>
+        <span>RecipeSite</span>
+      </a>
+
+      <nav class="nav">
+        <a href="recipes.html#browse">Browse</a>
+        <a href="recipes.html#pantry">Pantry</a>
+        <a href="recipes.html#favourites">Favourites</a>
+      </nav>
+
+      <div style="flex:1"></div>
+      <div class="auth"><!-- common.js handles auth UI --></div>
     </div>
   </header>
 
   <main class="container">
     <h1>Add a New Recipe</h1>
-    <div id="alert" style="margin-bottom:12px;padding:10px;border-radius:8px;background:#fee;color:#c00;border:1px solid #e00" hidden></div>
+    <div id="alert" style="margin-bottom:12px;padding:10px;border-radius:10px;background:#fee;color:#c00;border:1px solid #e00" hidden></div>
 
     <form id="addForm" class="card" style="display:grid; gap:24px;" enctype="multipart/form-data">
       
@@ -40,12 +62,16 @@
           <span>Category</span>
           <input id="rCat" type="text" list="catList" placeholder="e.g. Dinner" required />
           <datalist id="catList">
-            <option>Dinner</option><option>Lunch</option><option>Breakfast</option><option>Dessert</option>
+            <option>Breakfast</option>
+            <option>Lunch</option>
+            <option>Dinner</option>
+            <option>Dessert</option>
+            <option>Snack</option>
           </datalist>
         </label>
       </div>
 
-      <!-- Image upload instead of URL -->
+      <!-- Image upload -->
       <label class="field">
         <span>Image</span>
         <input id="rImgFile" type="file" accept="image/*" />
@@ -84,34 +110,102 @@
       const alertBox = document.getElementById('alert');
       const form = document.getElementById('addForm');
 
-      function showErr(m) { 
-        alertBox.textContent = m; 
-        alertBox.hidden = false; 
-        window.scrollTo(0,0); 
+      const heading = document.querySelector('main h1');
+      const submitBtn = form.querySelector('button[type="submit"]');
+
+      function showErr(m) {
+        alertBox.textContent = m;
+        alertBox.hidden = false;
+        window.scrollTo(0, 0);
       }
 
-      // 1. Wait for auth check – user must be logged in to add recipes
-      const check = setInterval(async () => {
-        if (window.supabase) {
-          clearInterval(check);
-          const { data } = await supabase.auth.getSession();
-          if (!data.session) {
-            alert('You must be signed in to add recipes.');
-            window.location.href = 'index.html?next=add-recipe.html';
-          }
+      const params = new URLSearchParams(location.search);
+      const editId = params.get('id');
+      const isEditMode = !!editId;
+      let existingImageUrl = null;
+
+      if (isEditMode) {
+        if (heading) heading.textContent = 'Edit Recipe';
+        if (submitBtn) submitBtn.textContent = 'Save Changes';
+      }
+
+      // Ensure user is logged in and, in edit mode, load existing recipe
+      async function initAuthAndMaybeLoad() {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('[auth] getSession error', error);
+          showErr('Could not check login status.');
+          return;
         }
-      }, 100);
+
+        const session = data?.session;
+        if (!session) {
+          alert('You must be signed in to add recipes.');
+          const next = isEditMode
+            ? 'add-recipe.html?id=' + encodeURIComponent(editId)
+            : 'add-recipe.html';
+          window.location.href = 'index.html?next=' + next;
+          return;
+        }
+
+        if (isEditMode) {
+          await loadExistingRecipe(editId, session.user);
+        }
+      }
+
+      async function loadExistingRecipe(id, user) {
+        try {
+          const { data: recipe, error } = await supabase
+            .from('recipes')
+            .select('id, title, category, ingredients, steps, image, calories, protein, carbs, fat, user_id')
+            .eq('id', id)
+            .maybeSingle();
+
+          if (error) {
+            console.error('[edit] load error', error);
+            showErr('Could not load recipe for editing.');
+            return;
+          }
+          if (!recipe) {
+            showErr('Recipe not found.');
+            return;
+          }
+
+          if (recipe.user_id && user && recipe.user_id !== user.id) {
+            showErr('You can only edit your own recipes.');
+            setTimeout(() => { window.location.href = 'recipes.html#browse'; }, 1500);
+            return;
+          }
+
+          document.getElementById('rTitle').value = recipe.title || '';
+          document.getElementById('rCat').value = recipe.category || '';
+          document.getElementById('rIng').value = Array.isArray(recipe.ingredients)
+            ? recipe.ingredients.join('\n')
+            : '';
+          document.getElementById('rSteps').value = Array.isArray(recipe.steps)
+            ? recipe.steps.join('\n')
+            : '';
+
+          document.getElementById('nCal').value = recipe.calories ?? '';
+          document.getElementById('nPro').value = recipe.protein ?? '';
+          document.getElementById('nCarb').value = recipe.carbs ?? '';
+          document.getElementById('nFat').value = recipe.fat ?? '';
+
+          existingImageUrl = recipe.image || null;
+        } catch (err) {
+          console.error('[edit] unexpected load error', err);
+          showErr('Could not load recipe for editing.');
+        }
+      }
 
       // Helper: upload image to Supabase Storage and return public URL
       async function uploadRecipeImage(file) {
         if (!file) return null;
 
-        // Make sure storage client exists
         if (!window.supabase || !supabase.storage) {
           throw new Error('Supabase storage is not available.');
         }
 
-        // Get user id for path (fallback to "anon" if something weird happens)
         let userId = null;
         try {
           const { data } = await supabase.auth.getUser();
@@ -121,11 +215,9 @@
         }
         const uid = userId || 'anon';
 
-        // Build a unique file path
         const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
         const path = `${uid}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
-        // Upload to bucket "recipes"
         const { data, error } = await supabase
           .storage
           .from('recipes')
@@ -144,7 +236,7 @@
         return publicData.publicUrl;
       }
 
-      // 2. Handle Submit
+      // Handle submit for both add + edit
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
         alertBox.hidden = true;
@@ -155,11 +247,10 @@
           const fileInput = document.getElementById('rImgFile');
           const file = fileInput.files && fileInput.files[0];
 
-          // Split textareas by newlines and remove empty lines
           const ingredients = document.getElementById('rIng').value
-            .split('\n').map(s=>s.trim()).filter(s=>s);
+            .split('\n').map(s => s.trim()).filter(s => s);
           const steps = document.getElementById('rSteps').value
-            .split('\n').map(s=>s.trim()).filter(s=>s);
+            .split('\n').map(s => s.trim()).filter(s => s);
 
           const calories = parseInt(document.getElementById('nCal').value) || 0;
           const protein = parseInt(document.getElementById('nPro').value) || 0;
@@ -175,8 +266,7 @@
             return;
           }
 
-          // Upload image if provided
-          let imageUrl = null;
+          let imageUrl = existingImageUrl;
           if (file) {
             imageUrl = await uploadRecipeImage(file);
           }
@@ -193,20 +283,46 @@
             fat
           };
 
-          const newRecipe = await RecipeSite.addRecipe(payload);
-          
-          if (newRecipe && newRecipe.id) {
-             window.location.href = 'recipe-detail.html?id=' + newRecipe.id;
+          if (isEditMode && editId) {
+            const { data: updated, error } = await supabase
+              .from('recipes')
+              .update(payload)
+              .eq('id', editId)
+              .select('*')
+              .maybeSingle();
+
+            if (error) {
+              console.error('[edit] update error', error);
+              throw new Error(error.message);
+            }
+
+            const idToGo = updated?.id || editId;
+            window.location.href = 'recipe-detail.html?id=' + encodeURIComponent(idToGo);
           } else {
-             // If RLS allows insert but doesn't return rows, just go back to list
-             window.location.href = 'recipes.html#browse';
+            const newRecipe = await RecipeSite.addRecipe(payload);
+
+            if (newRecipe && newRecipe.id) {
+              window.location.href = 'recipe-detail.html?id=' + encodeURIComponent(newRecipe.id);
+            } else {
+              window.location.href = 'recipes.html#browse';
+            }
           }
 
         } catch (err) {
           console.error(err);
-          showErr('Error saving recipe: ' + err.message);
+          showErr('Error saving recipe: ' + (err.message || String(err)));
         }
       });
+
+      const check = setInterval(() => {
+        if (window.supabase) {
+          clearInterval(check);
+          initAuthAndMaybeLoad().catch(err => {
+            console.error(err);
+            showErr('Error initialising page: ' + (err.message || String(err)));
+          });
+        }
+      }, 100);
     });
   </script>
 </body>

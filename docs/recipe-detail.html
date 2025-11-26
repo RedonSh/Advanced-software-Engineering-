@@ -14,7 +14,7 @@
     window.ENV_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJocWVhc210cmRmcW5jbGlpcGtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIwNzQ4NzgsImV4cCI6MjA3NzY1MDg3OH0.249y8yGBYKgcvnoKkdTft94Mu74kbO_Ioso2HFrTFpg';
   </script>
 
-  <!-- Supabase -->
+  <!-- Supabase client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"
           onload="
             try {
@@ -26,81 +26,84 @@
             } catch(e) { console.error('[supabase] init error', e); }
           "></script>
 
-  <!-- Core (RecipeSite, favourites, pantry, etc.) -->
+  <!-- Shared helpers -->
   <script src="js/common.js" defer></script>
 
   <style>
-    .alert{
-      margin:12px 0;
-      padding:10px 12px;
-      border:1px solid #e11;
-      border-radius:10px;
-      background:#fee;
-      color:#700;
+    body{
+      background:radial-gradient(circle at top,#f5f3ff 0,#ffffff 40%,#f9fafb 100%);
     }
-
-    /* Fancy back button */
-    .header-back{
-      display:inline-flex;
-      align-items:center;
-      gap:6px;
-      padding:6px 14px;
-      border-radius:999px;
-      border:1px solid #e5e7eb;
-      background:#f9fafb;
-      color:#374151;
-      text-decoration:none;
-      font-size:0.9rem;
-      font-weight:500;
-      box-shadow:0 6px 14px rgba(15,23,42,0.06);
-      transition:
-        background-color .15s ease,
-        box-shadow .15s ease,
-        transform .10s ease;
+    .site-head{
+      position:sticky;
+      top:0;
+      z-index:40;
+      backdrop-filter:saturate(130%) blur(10px);
+      background:color-mix(in oklab,var(--card,#fff),transparent 10%);
+      border-bottom:1px solid #e5e7ebaa;
     }
-    .header-back-icon{
-      font-size:1rem;
-    }
-    .header-back:hover{
-      background:#eef2ff;
-      transform:translateY(-1px);
-      box-shadow:0 10px 20px rgba(15,23,42,0.09);
-    }
-
-    .pill{
-      display:inline-flex;
-      align-items:center;
-      padding:3px 10px;
-      border-radius:999px;
-      font-size:0.8rem;
-      background:#f3f4f6;
-      color:#4b5563;
-      gap:6px;
-    }
-    .pill.owner{
-      background:#ecfdf3;
-      color:#15803d;
-    }
-
-    .meta-row{
+    .site-head .wrap{
       display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+      padding-block:10px;
       flex-wrap:wrap;
-      gap:8px;
-      font-size:0.85rem;
-      color:#6b7280;
-      margin-top:6px;
+    }
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      text-decoration:none;
+      color:inherit;
+      font-weight:700;
+    }
+    .brand span{letter-spacing:.03em;}
+    .nav{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .nav a{
+      padding:6px 10px;
+      border-radius:999px;
+      text-decoration:none;
+      color:inherit;
+      border:1px solid transparent;
+      font-size:.9rem;
+    }
+    .nav a[aria-current="page"]{
+      background:color-mix(in oklab,var(--accent,#16a34a),white 85%);
+      border-color:#0001;
+    }
+    .head-search{
+      flex:1;
+      min-width:220px;
+      max-width:420px;
+    }
+    .head-search input{width:100%;}
+    .auth{
+      min-width:120px;
+      text-align:right;
+      font-size:.9rem;
     }
 
-    .recipe-shell{
+    .alert{
+      margin-bottom:16px;
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid #fecaca;
+      background:#fef2f2;
+      color:#b91c1c;
+    }
+
+    .recipe-layout{
       display:flex;
       flex-direction:column;
-      gap:20px;
+      gap:18px;
     }
-
-    .recipe-hero-card{
-      padding:0;
+    .recipe-hero{
+      border-radius:22px;
       overflow:hidden;
-      border-radius:18px;
       border:1px solid #e5e7eb;
       box-shadow:0 14px 30px rgba(15,23,42,0.08);
       background:linear-gradient(145deg,#f9fafb,#ffffff);
@@ -119,64 +122,90 @@
       display:block;
     }
     .recipe-hero-fallback{
-      height:260px;
       display:flex;
       align-items:center;
       justify-content:center;
-      color:#9ca3af;
-      font-size:0.95rem;
+      padding:60px 20px;
+      color:#94a3b8;
+      font-size:.95rem;
     }
     .recipe-hero-body{
       padding:18px 18px 16px;
-    }
-    .recipe-hero-title-row{
       display:flex;
-      flex-wrap:wrap;
+      flex-direction:column;
       gap:10px;
+    }
+    .recipe-title-row{
+      display:flex;
+      gap:12px;
       align-items:flex-start;
       justify-content:space-between;
+      flex-wrap:wrap;
     }
-    .recipe-hero-title{
-      margin:0;
+    .recipe-title-row h1{
       font-size:1.6rem;
-      line-height:1.2;
+      margin:0;
     }
-    .recipe-hero-actions{
+    .pill-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+      margin-top:4px;
+    }
+    .pill{
+      border-radius:999px;
+      padding:4px 9px;
+      font-size:.8rem;
+      background:#eef2ff;
+      color:#4f46e5;
+    }
+    .pill.owner{
+      background:#dcfce7;
+      color:#166534;
+    }
+    .meta-row{
       display:flex;
       flex-wrap:wrap;
       gap:8px;
-      justify-content:flex-end;
+      font-size:.85rem;
+      color:#6b7280;
+      align-items:center;
     }
 
-    .recipe-main-grid{
+    .recipe-main{
       display:grid;
+      grid-template-columns: minmax(0,2fr) minmax(260px,1fr);
       gap:18px;
-      grid-template-columns: minmax(0,2fr) minmax(0,1.3fr);
       align-items:flex-start;
     }
     @media (max-width:900px){
-      .recipe-main-grid{
+      .recipe-main{
         grid-template-columns:1fr;
       }
     }
-
     .section-card{
-      border-radius:16px;
-      border:1px solid #e5e7eb;
+      border-radius:18px;
       background:#ffffff;
+      border:1px solid #e5e7eb;
       padding:16px 18px;
       box-shadow:0 10px 24px rgba(15,23,42,0.06);
     }
     .section-card h2{
-      margin-top:0;
-      margin-bottom:8px;
+      margin:0 0 10px;
+      font-size:1.1rem;
     }
-
-    .bullet{
-      padding-left:18px;
+    .ingredients-list,
+    .steps-list{
+      padding-left:1.2rem;
+      margin:0;
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      font-size:.95rem;
     }
-    .num{
-      padding-left:20px;
+    .ingredients-list li,
+    .steps-list li{
+      margin:0;
     }
 
     .nutrition-list{
@@ -184,54 +213,39 @@
       padding:0;
       margin:0;
       display:grid;
-      gap:8px;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:8px 10px;
+      font-size:.9rem;
     }
     .nutrition-list li{
       display:flex;
       justify-content:space-between;
-      font-size:0.95rem;
-      padding:6px 8px;
-      border-radius:10px;
       background:#f9fafb;
+      border-radius:10px;
+      padding:6px 8px;
+      border:1px solid #e5e7eb;
     }
-    .nutrition-list strong{
-      font-weight:600;
-    }
-
-    .aside-note{
-      font-size:0.85rem;
+    .nutrition-list span{
       color:#6b7280;
-      margin-top:8px;
     }
 
     .tiny-label{
-      font-size:0.75rem;
       text-transform:uppercase;
-      letter-spacing:.06em;
-      color:#9ca3af;
-      margin-bottom:4px;
-      display:block;
+      font-size:.7rem;
+      letter-spacing:.08em;
+      color:#6b7280;
+    }
+    .aside-note{
+      font-size:.85rem;
+      color:#6b7280;
+      margin-top:6px;
+    }
+
+    .btn.small{
+      padding:5px 10px;
+      font-size:.85rem;
     }
   </style>
-</head>
-<body>
-  <header class="site-head">
-    <div class="container">
-      <nav class="nav">
-        <a href="recipes.html#browse" class="header-back">
-          <span class="header-back-icon">←</span>
-          <span>Back to recipes</span>
-        </a>
-      </nav>
-    </div>
-  </header>
-
-  <main class="container" style="padding-top:20px;padding-bottom:24px;">
-    <div id="alert" class="alert" hidden></div>
-    <div id="detail">
-      <p class="muted">Loading recipe…</p>
-    </div>
-  </main>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -320,13 +334,18 @@
 
           const ownerActionsHtml = isOwner ? `
             <div class="row" style="margin-top: 8px; gap: 8px; align-items:center;">
+              <button id="editRecipeBtn"
+                      type="button"
+                      class="btn outline">
+                Edit recipe
+              </button>
               <button id="deleteRecipeBtn"
                       type="button"
                       class="btn outline"
                       style="border-color:#dc2626;color:#b91c1c;">
                 Delete recipe
               </button>
-              <span class="small muted">Only you can see this button.</span>
+              <span class="small muted">Only you can see these buttons.</span>
             </div>
           ` : '';
 
@@ -339,57 +358,56 @@
             </ul>
           `;
 
-          detailEl.innerHTML = `
-            <div class="recipe-shell">
+          const favLabel = isFav ? '✓ Saved' : '☆ Save';
 
-              <!-- HERO -->
-              <section class="recipe-hero-card card">
+          detailEl.innerHTML = `
+            <div class="recipe-layout">
+              <section class="recipe-hero">
                 <div class="recipe-hero-media">
                   ${imgHtml}
                 </div>
                 <div class="recipe-hero-body">
-                  <div class="recipe-hero-title-row">
+                  <div class="recipe-title-row">
                     <div>
-                      <h1 class="recipe-hero-title">${recipe.title}</h1>
-                      <div class="meta-row">
+                      <h1>${recipe.title}</h1>
+                      <div class="pill-row">
                         ${categoryChip}
-                        ${createdChip}
                         ${ownerChip}
+                        ${createdChip}
                       </div>
                     </div>
-                    <div class="recipe-hero-actions">
-                      <button id="favToggle"
-                              type="button"
-                              class="btn small"
-                              data-fav="${recipe.id}">
-                        ${isFav ? '✓ Saved' : '☆ Save'}
+                    <div class="row" style="gap:8px; align-items:center;">
+                      <button id="favToggle" type="button" class="btn small outline">
+                        ${favLabel}
                       </button>
+                      <a href="recipes.html#browse" class="btn small outline">← Back to recipes</a>
                     </div>
                   </div>
+
+                  <div class="meta-row">
+                    <span>Serves: <strong>4</strong></span>
+                    <span>Prep &amp; cook: <strong>~45 mins</strong></span>
+                  </div>
+
                   ${ownerActionsHtml}
                 </div>
               </section>
 
-              <!-- MAIN GRID -->
-              <section class="recipe-main-grid">
+              <section class="recipe-main">
                 <!-- LEFT: ingredients + steps -->
                 <div class="recipe-main-left" style="display:flex;flex-direction:column;gap:16px;">
                   <section class="section-card">
                     <h2>Ingredients</h2>
-                    ${
-                      ingredients.length
-                        ? `<ul class="bullet">${ingredients.map(i => `<li>${i}</li>`).join('')}</ul>`
-                        : '<p class="muted">No ingredients listed for this recipe yet.</p>'
-                    }
+                    <ul class="ingredients-list">
+                      ${ingredients.map(i => `<li>${i}</li>`).join('')}
+                    </ul>
                   </section>
 
                   <section class="section-card">
-                    <h2>Steps</h2>
-                    ${
-                      steps.length
-                        ? `<ol class="num">${steps.map(s => `<li>${s}</li>`).join('')}</ol>`
-                        : '<p class="muted">No steps listed for this recipe yet.</p>'
-                    }
+                    <h2>Method</h2>
+                    <ol class="steps-list">
+                      ${steps.map(s => `<li>${s}</li>`).join('')}
+                    </ol>
                   </section>
                 </div>
 
@@ -424,36 +442,52 @@
                 favBtn.textContent = nowFav ? '✓ Saved' : '☆ Save';
               } catch (err) {
                 console.error('[favToggle] error:', err);
+                alert('Could not update favourites.');
               }
             });
           }
 
-          // Delete button (owner only)
-          const deleteBtn = document.getElementById('deleteRecipeBtn');
-          if (deleteBtn && isOwner) {
-            deleteBtn.addEventListener('click', async () => {
-              const ok = confirm('Delete this recipe? This cannot be undone.');
-              if (!ok) return;
+          // Edit / Delete buttons (owner only)
+          const idStr = String(recipe.id);
 
-              try {
-                const { error: delErr } = await supabase
-                  .from('recipes')
-                  .delete()
-                  .eq('id', recipe.id); // RLS should still ensure only owner can delete
-
-                if (delErr) {
-                  console.error('[delete] error:', delErr.message);
-                  alert('Could not delete recipe: ' + delErr.message);
-                  return;
-                }
-
-                window.location.href = 'recipes.html#browse';
-              } catch (err) {
-                console.error('[delete] unexpected error:', err);
-                alert('Something went wrong deleting the recipe.');
-              }
+          const editBtn = document.getElementById('editRecipeBtn');
+          if (editBtn && isOwner) {
+            editBtn.addEventListener('click', () => {
+              window.location.href = 'add-recipe.html?id=' + encodeURIComponent(idStr);
             });
           }
+
+const deleteBtn = document.getElementById('deleteRecipeBtn');
+if (deleteBtn && isOwner) {
+  deleteBtn.addEventListener('click', async () => {
+    const ok = confirm('Delete this recipe? This cannot be undone.');
+    if (!ok) return;
+
+    const idStr = String(recipe.id);
+
+    try {
+      const { error: delErr } = await supabase
+        .from('recipes')
+        .delete()
+        .eq('id', idStr);
+
+      if (delErr) {
+        console.error('[delete] error:', delErr);
+        alert(
+          'Could not delete recipe. Check Supabase policies & permissions.\n\n' +
+          (delErr.message || 'Unknown error')
+        );
+        return;
+      }
+
+      window.location.href = 'recipes.html#browse';
+    } catch (err) {
+      console.error('[delete] unexpected error:', err);
+      alert('Something went wrong deleting the recipe. See console for details.');
+    }
+  });
+}
+
 
         } catch (e) {
           console.error(e);
@@ -470,5 +504,39 @@
       }, 100);
     });
   </script>
+</head>
+<body>
+  <header class="site-head">
+    <div class="container wrap">
+      <a href="recipes.html#browse" class="brand">
+        <svg viewBox="0 0 24 24" fill="currentColor" style="width:22px;height:22px;" aria-hidden="true">
+          <path d="M8 3a1 1 0 0 0-1 1v2h10a1 1 0 1 1 0 2H7v2h8.5a3.5 3.5 0 1 1 0 7H12v2h4.5a5.5 5.5 0 0 0 0-11H6V4a1 1 0 0 1 1-1h1z"/>
+        </svg>
+        <span>RecipeSite</span>
+      </a>
+
+      <nav class="nav">
+        <a href="recipes.html#browse">Browse</a>
+        <a href="recipes.html#pantry">Pantry</a>
+        <a href="recipes.html#favourites">Favourites</a>
+      </nav>
+
+      <div class="head-search">
+        <input type="search" placeholder="Search all recipes..." disabled />
+      </div>
+
+      <div class="auth">
+        <!-- common.js will populate -->
+      </div>
+    </div>
+  </header>
+
+  <main class="container" style="padding-top:24px;padding-bottom:24px;">
+    <div id="alert" class="alert" hidden></div>
+    <div id="detail">
+      <!-- Filled by JS -->
+      <p class="muted">Loading recipe...</p>
+    </div>
+  </main>
 </body>
 </html>
