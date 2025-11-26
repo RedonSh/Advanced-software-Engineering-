@@ -498,7 +498,7 @@
 
         /* ===== Pantry (Design 2 – Card Grid) ===== */
         /* ===== Pantry (Design 2 – Card Grid, robust) ===== */
-        let pantryBooted = false;
+        var pantryBooted = false;  <!-- CHANGED FROM let TO var -->
         function bootPantry() {
           if (pantryBooted) return;
           pantryBooted = true;
