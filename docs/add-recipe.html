@@ -4,14 +4,19 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>RecipeSite — Add Recipe</title>
+
+  <!-- Same CSS stack as recipes page -->
   <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/recipes.css" />
   <link rel="stylesheet" href="css/recipe.css" />
 
+  <!-- Supabase env -->
   <script>
     window.ENV_SUPABASE_URL = 'https://bhqeasmtrdfqncliipki.supabase.co/';
     window.ENV_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJocWVhc210cmRmcW5jbGlpcGtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIwNzQ4NzgsImV4cCI6MjA3NzY1MDg3OH0.249y8yGBYKgcvnoKkdTft94Mu74kbO_Ioso2HFrTFpg';
   </script>
 
+  <!-- Supabase client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"
           onload="
             try {
@@ -23,13 +28,79 @@
             } catch(e) { console.error('[supabase] init error', e); }
           "></script>
 
+  <!-- Shared helpers -->
   <script src="js/common.js"></script>
+
+  <!-- Header + alert styling copied to match recipes.html -->
+  <style>
+    .site-head{
+      position:sticky;
+      top:0;
+      z-index:50;
+      backdrop-filter:saturate(120%) blur(6px);
+      background:color-mix(in oklab,var(--card,#fff),transparent 15%);
+      border-bottom:1px solid #0001;
+    }
+    .site-head .wrap{
+      display:flex;
+      gap:16px;
+      align-items:center;
+      justify-content:space-between;
+      flex-wrap:wrap;
+      padding-block:10px;
+    }
+    .brand{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      font-weight:700;
+      text-decoration:none;
+      color:inherit;
+    }
+    .brand svg{
+      width:22px;
+      height:22px;
+    }
+    .nav{
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+    .nav a{
+      padding:6px 10px;
+      border-radius:999px;
+      text-decoration:none;
+      color:inherit;
+      border:1px solid transparent;
+    }
+    .nav a[aria-current="page"]{
+      background:color-mix(in oklab,var(--accent,#16a34a),white 85%);
+      border-color:#00000010;
+    }
+    .head-search{
+      flex:1;
+      min-width:220px;
+      max-width:480px;
+    }
+    .head-search input{
+      width:100%;
+    }
+    .alert{
+      margin:12px 0;
+      padding:10px 12px;
+      border:1px solid #e11;
+      border-radius:10px;
+      background:#fee;
+      color:#700;
+    }
+  </style>
 </head>
 <body>
+  <!-- HEADER: identical structure to recipes.html -->
   <header class="site-head">
     <div class="container wrap">
       <a href="recipes.html#browse" class="brand">
-        <svg viewBox="0 0 24 24" fill="currentColor" style="width:22px;height:22px;" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path d="M8 3a1 1 0 0 0-1 1v2h10a1 1 0 1 1 0 2H7v2h8.5a3.5 3.5 0 1 1 0 7H12v2h4.5a5.5 5.5 0 0 0 0-11H6V4a1 1 0 0 1 1-1h1z"/>
         </svg>
         <span>RecipeSite</span>
@@ -41,17 +112,19 @@
         <a href="recipes.html#favourites">Favourites</a>
       </nav>
 
-      <div style="flex:1"></div>
-      <div class="auth"><!-- common.js handles auth UI --></div>
+      <div class="head-search">
+        <input id="globalSearch" type="search" placeholder="Search all recipes..." />
+      </div>
+      
+      <div class="auth" style="min-width: 120px; text-align: right;"></div>
     </div>
   </header>
 
-  <main class="container">
+  <main class="container" style="padding-top:24px; padding-bottom:24px;">
     <h1>Add a New Recipe</h1>
-    <div id="alert" style="margin-bottom:12px;padding:10px;border-radius:10px;background:#fee;color:#c00;border:1px solid #e00" hidden></div>
+    <div id="alert" class="alert" hidden></div>
 
     <form id="addForm" class="card" style="display:grid; gap:24px;" enctype="multipart/form-data">
-      
       <!-- Basic Info -->
       <div class="row" style="gap:16px; flex-wrap:wrap;">
         <label class="field" style="flex:2; min-width:200px;">
@@ -62,11 +135,10 @@
           <span>Category</span>
           <input id="rCat" type="text" list="catList" placeholder="e.g. Dinner" required />
           <datalist id="catList">
-            <option>Breakfast</option>
-            <option>Lunch</option>
             <option>Dinner</option>
+            <option>Lunch</option>
+            <option>Breakfast</option>
             <option>Dessert</option>
-            <option>Snack</option>
           </datalist>
         </label>
       </div>
@@ -94,10 +166,22 @@
       <fieldset style="border:1px solid #e5e7eb; border-radius:8px; padding:16px;">
         <legend style="padding:0 8px; color:#666; font-weight:600;">Nutrition (optional)</legend>
         <div class="row" style="gap:12px; flex-wrap:wrap;">
-          <label class="field" style="flex:1"><span>Calories</span><input type="number" id="nCal" placeholder="0" /></label>
-          <label class="field" style="flex:1"><span>Protein (g)</span><input type="number" id="nPro" placeholder="0" /></label>
-          <label class="field" style="flex:1"><span>Carbs (g)</span><input type="number" id="nCarb" placeholder="0" /></label>
-          <label class="field" style="flex:1"><span>Fat (g)</span><input type="number" id="nFat" placeholder="0" /></label>
+          <label class="field" style="flex:1">
+            <span>Calories</span>
+            <input type="number" id="nCal" placeholder="0" />
+          </label>
+          <label class="field" style="flex:1">
+            <span>Protein (g)</span>
+            <input type="number" id="nPro" placeholder="0" />
+          </label>
+          <label class="field" style="flex:1">
+            <span>Carbs (g)</span>
+            <input type="number" id="nCarb" placeholder="0" />
+          </label>
+          <label class="field" style="flex:1">
+            <span>Fat (g)</span>
+            <input type="number" id="nFat" placeholder="0" />
+          </label>
         </div>
       </fieldset>
 
@@ -110,92 +194,80 @@
       const alertBox = document.getElementById('alert');
       const form = document.getElementById('addForm');
 
-      const heading = document.querySelector('main h1');
-      const submitBtn = form.querySelector('button[type="submit"]');
-
       function showErr(m) {
         alertBox.textContent = m;
         alertBox.hidden = false;
         window.scrollTo(0, 0);
       }
 
-      const params = new URLSearchParams(location.search);
-      const editId = params.get('id');
-      const isEditMode = !!editId;
-      let existingImageUrl = null;
+      /* ===== Header auth UI to match recipes page ===== */
+      async function updateAuthUI() {
+        const authContainer = document.querySelector('header .auth');
+        if (!authContainer || !window.supabase) return;
 
-      if (isEditMode) {
-        if (heading) heading.textContent = 'Edit Recipe';
-        if (submitBtn) submitBtn.textContent = 'Save Changes';
+        const { data } = await supabase.auth.getSession();
+        const session = data?.session || null;
+
+        if (!session || !session.user) {
+          const next = encodeURIComponent('add-recipe.html');
+          authContainer.innerHTML = `<a class="btn small outline" href="index.html?next=${next}">Sign in</a>`;
+        } else {
+          const user = session.user;
+          const displayName = user.user_metadata?.username || user.email.split('@')[0];
+          authContainer.innerHTML = `
+            <span style="font-size: 0.9rem; margin-right: 12px;">Hi, ${displayName}</span>
+            <button class="btn small outline" id="logoutButton">Logout</button>
+          `;
+          authContainer.querySelector('#logoutButton').addEventListener('click', async () => {
+            try {
+              await supabase.auth.signOut();
+              window.location.href = 'recipes.html#browse';
+            } catch (e) {
+              console.error('signOut error', e);
+            }
+          });
+        }
       }
 
-      // Ensure user is logged in and, in edit mode, load existing recipe
-      async function initAuthAndMaybeLoad() {
-        const { data, error } = await supabase.auth.getSession();
-        if (error) {
-          console.error('[auth] getSession error', error);
-          showErr('Could not check login status.');
-          return;
-        }
+      // Keep header auth in sync
+      if (window.supabase) {
+        updateAuthUI();
+        supabase.auth.onAuthStateChange(() => updateAuthUI());
+      } else {
+        const check = setInterval(() => {
+          if (window.supabase) {
+            clearInterval(check);
+            updateAuthUI();
+            supabase.auth.onAuthStateChange(() => updateAuthUI());
+          }
+        }, 100);
+      }
 
-        const session = data?.session;
-        if (!session) {
+      // Require login to add recipes
+      const authCheck = setInterval(async () => {
+        if (!window.supabase) return;
+        const { data } = await supabase.auth.getSession();
+        if (!data.session) {
+          clearInterval(authCheck);
           alert('You must be signed in to add recipes.');
-          const next = isEditMode
-            ? 'add-recipe.html?id=' + encodeURIComponent(editId)
-            : 'add-recipe.html';
-          window.location.href = 'index.html?next=' + next;
-          return;
+          window.location.href = 'index.html?next=add-recipe.html';
+        } else {
+          clearInterval(authCheck);
         }
+      }, 100);
 
-        if (isEditMode) {
-          await loadExistingRecipe(editId, session.user);
-        }
-      }
-
-      async function loadExistingRecipe(id, user) {
-        try {
-          const { data: recipe, error } = await supabase
-            .from('recipes')
-            .select('id, title, category, ingredients, steps, image, calories, protein, carbs, fat, user_id')
-            .eq('id', id)
-            .maybeSingle();
-
-          if (error) {
-            console.error('[edit] load error', error);
-            showErr('Could not load recipe for editing.');
-            return;
+      // Simple behaviour for header search: redirect back to Browse with a query param
+      const globalSearch = document.getElementById('globalSearch');
+      if (globalSearch) {
+        globalSearch.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            const q = encodeURIComponent(globalSearch.value.trim());
+            window.location.href = q
+              ? `recipes.html#browse?q=${q}`
+              : 'recipes.html#browse';
           }
-          if (!recipe) {
-            showErr('Recipe not found.');
-            return;
-          }
-
-          if (recipe.user_id && user && recipe.user_id !== user.id) {
-            showErr('You can only edit your own recipes.');
-            setTimeout(() => { window.location.href = 'recipes.html#browse'; }, 1500);
-            return;
-          }
-
-          document.getElementById('rTitle').value = recipe.title || '';
-          document.getElementById('rCat').value = recipe.category || '';
-          document.getElementById('rIng').value = Array.isArray(recipe.ingredients)
-            ? recipe.ingredients.join('\n')
-            : '';
-          document.getElementById('rSteps').value = Array.isArray(recipe.steps)
-            ? recipe.steps.join('\n')
-            : '';
-
-          document.getElementById('nCal').value = recipe.calories ?? '';
-          document.getElementById('nPro').value = recipe.protein ?? '';
-          document.getElementById('nCarb').value = recipe.carbs ?? '';
-          document.getElementById('nFat').value = recipe.fat ?? '';
-
-          existingImageUrl = recipe.image || null;
-        } catch (err) {
-          console.error('[edit] unexpected load error', err);
-          showErr('Could not load recipe for editing.');
-        }
+        });
       }
 
       // Helper: upload image to Supabase Storage and return public URL
@@ -236,7 +308,7 @@
         return publicData.publicUrl;
       }
 
-      // Handle submit for both add + edit
+      // Handle Submit
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
         alertBox.hidden = true;
@@ -266,7 +338,7 @@
             return;
           }
 
-          let imageUrl = existingImageUrl;
+          let imageUrl = null;
           if (file) {
             imageUrl = await uploadRecipeImage(file);
           }
@@ -283,46 +355,19 @@
             fat
           };
 
-          if (isEditMode && editId) {
-            const { data: updated, error } = await supabase
-              .from('recipes')
-              .update(payload)
-              .eq('id', editId)
-              .select('*')
-              .maybeSingle();
+          const newRecipe = await RecipeSite.addRecipe(payload);
 
-            if (error) {
-              console.error('[edit] update error', error);
-              throw new Error(error.message);
-            }
-
-            const idToGo = updated?.id || editId;
-            window.location.href = 'recipe-detail.html?id=' + encodeURIComponent(idToGo);
+          if (newRecipe && newRecipe.id) {
+            window.location.href = 'recipe-detail.html?id=' + newRecipe.id;
           } else {
-            const newRecipe = await RecipeSite.addRecipe(payload);
-
-            if (newRecipe && newRecipe.id) {
-              window.location.href = 'recipe-detail.html?id=' + encodeURIComponent(newRecipe.id);
-            } else {
-              window.location.href = 'recipes.html#browse';
-            }
+            window.location.href = 'recipes.html#browse';
           }
 
         } catch (err) {
           console.error(err);
-          showErr('Error saving recipe: ' + (err.message || String(err)));
+          showErr('Error saving recipe: ' + err.message);
         }
       });
-
-      const check = setInterval(() => {
-        if (window.supabase) {
-          clearInterval(check);
-          initAuthAndMaybeLoad().catch(err => {
-            console.error(err);
-            showErr('Error initialising page: ' + (err.message || String(err)));
-          });
-        }
-      }, 100);
     });
   </script>
 </body>

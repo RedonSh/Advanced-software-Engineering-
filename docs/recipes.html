@@ -257,18 +257,17 @@
     .field-group .field{flex:1;}
 
     /* Align pantry Edit / Remove buttons to the right in the header */
-.pantry-card-header{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  padding-left:4px;
-}
+    .pantry-card-header{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding-left:4px;
+    }
 
-.pantry-card-header .row{
-  margin-left:auto;   /* push buttons to the right */
-  margin-top:0;       /* cancel the generic .row margin-top */
-}
-
+    .pantry-card-header .row{
+      margin-left:auto;
+      margin-top:0;
+    }
   </style>
 
   <script>
@@ -311,11 +310,9 @@
         }
       }
 
-      // Listen for auth changes (no redirect for guests)
       supabase.auth.onAuthStateChange((event, session) => {
         updateAuthUI(session || null);
 
-        // Clear favourites + pantry UI immediately on logout
         if (event === 'SIGNED_OUT') {
           const favGrid = document.getElementById('favGrid');
           if (favGrid) favGrid.innerHTML = '<p class="muted">No favourites yet.</p>';
@@ -324,9 +321,7 @@
         }
       });
 
-      /* =====  APP BOOT FUNCTION  ===== */
       function bootApp() {
-        /* Router */
         const sections = [...document.querySelectorAll('section.route')];
         const tabs = [...document.querySelectorAll('header .nav a')];
         function setActive(hash){
@@ -340,7 +335,7 @@
         if (!location.hash) location.hash = '#browse';
         setActive(location.hash);
 
-        /* ===== Browse (with Surprise Me) ===== */
+        /* ===== Browse (with Surprise Me + pantry suggestions) ===== */
         const state = { all: [], filtered: [], page:1, pageSize:12, randomMode: false };
         
         const grid = document.getElementById('browseGrid');
@@ -353,7 +348,6 @@
         const resetBtn = document.getElementById('resetBtn');
         const globalSearch = document.getElementById('globalSearch');
         
-        // --- Add Recipe button (requires login) ---
         const addBtn = document.getElementById('addRecipeBtn');
         if (addBtn) {
           addBtn.addEventListener('click', async () => {
@@ -370,6 +364,51 @@
         const debounce = (fn,ms)=>{let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};};
         const normalize = s => (s||'').toString().toLowerCase();
 
+        /* Pantry-based suggestion helpers for Browse */
+        let browsePantryNames = [];
+
+        function computePantryMatches(recipe) {
+          if (!browsePantryNames.length) return 0;
+          const ings = (recipe.ingredients || []).map((it) =>
+            normalize(it).replace(/[^a-z0-9\s]/g, '')
+          );
+          let count = 0;
+          for (const raw of browsePantryNames) {
+            const pn = raw.trim();
+            if (!pn) continue;
+            const cleanPn = pn.replace(/[^a-z0-9\s]/g, '');
+            if (!cleanPn) continue;
+            const hit = ings.some((ing) =>
+              ing.includes(cleanPn) || cleanPn.includes(ing)
+            );
+            if (hit) count++;
+          }
+          return count;
+        }
+
+        async function refreshBrowsePantryMatches(recipes) {
+          try {
+            if (!window.RecipeSite || !RecipeSite.pantryList) {
+              browsePantryNames = [];
+              (recipes || []).forEach((r) => (r._pantryMatches = 0));
+              return;
+            }
+            const maybe = RecipeSite.pantryList();
+            const items = await Promise.resolve(maybe);
+            browsePantryNames = (items || [])
+              .map((it) => normalize(it.name || ''))
+              .filter(Boolean);
+
+            (recipes || []).forEach((r) => {
+              r._pantryMatches = computePantryMatches(r);
+            });
+          } catch (e) {
+            console.warn('[browse pantry] could not load pantry', e);
+            browsePantryNames = [];
+            (recipes || []).forEach((r) => (r._pantryMatches = 0));
+          }
+        }
+
         function cardHTML(r){
           const to = `recipe-detail.html?id=${encodeURIComponent(r.id)}`;
           const imgHtml = r.image ? `
@@ -378,6 +417,12 @@
                 <img class="thumb" src="${r.image}" alt="${r.title}" loading="lazy" />
               </div>
             </a>` : `<div class="noimg-badge">No image</div>`;
+
+          const matchCount = typeof r._pantryMatches === 'number' ? r._pantryMatches : 0;
+          const matchLine = matchCount > 0
+            ? `<p class="muted small">Uses ${matchCount} item(s) from your pantry</p>`
+            : '';
+
           return `
             <article class="card link-card">
               ${imgHtml}
@@ -387,6 +432,7 @@
               </div>
               <div class="pill cat">${r.category || ''}</div>
               <p class="muted">Ingredients: ${(r.ingredients||[]).slice(0,4).join(', ')}...</p>
+              ${matchLine}
               <div class="row"><a class="btn small outline" href="${to}">View details</a></div>
             </article>`;
         }
@@ -408,21 +454,40 @@
           });
         }
 
+        /* UPDATED: applyFilters now sorts by pantry matches first */
         function applyFilters(){
           if (state.randomMode) return;
 
           const q = normalize(qInput.value);
           const cat = catSelect.value || 'All';
           let list = state.all;
-          if (cat!=='All') list = list.filter(r => (r.category||'').toLowerCase() === cat.toLowerCase());
-          if (q) list = list.filter(r => {
-            const hay = [r.title, r.category, ...(r.ingredients||[])].join(' ').toLowerCase();
-            return hay.includes(q);
-          });
+
+          if (cat!=='All') {
+            list = list.filter(r => (r.category||'').toLowerCase() === cat.toLowerCase());
+          }
+
+          if (q) {
+            list = list.filter(r => {
+              const hay = [r.title, r.category, ...(r.ingredients||[])].join(' ').toLowerCase();
+              return hay.includes(q);
+            });
+          }
           
           const mode = sortSelect.value || 'recent';
-          if (mode==='alpha') list.sort((a,b)=>a.title.localeCompare(b.title));
-          
+
+          // clone before sorting so we don't mutate state.all order
+          list = [...list];
+          list.sort((a,b)=>{
+            const ma = typeof a._pantryMatches === 'number' ? a._pantryMatches : 0;
+            const mb = typeof b._pantryMatches === 'number' ? b._pantryMatches : 0;
+            if (mb !== ma) return mb - ma;        // more pantry matches first
+            if (mode === 'alpha') {
+              return (a.title || '').localeCompare(b.title || '');
+            }
+            // 'recent' → keep original order for ties
+            return 0;
+          });
+
           state.filtered = list;
           state.page = 1;
           paginate();
@@ -466,6 +531,8 @@
             state.all = all || [];
             state.filtered = all || [];
 
+            await refreshBrowsePantryMatches(state.all);
+
             qInput.addEventListener('input', debounce(applyFilters,150));
             catSelect.addEventListener('change', applyFilters);
             sortSelect.addEventListener('change', applyFilters);
@@ -496,9 +563,8 @@
         }
         bootBrowse();
 
-        /* ===== Pantry (Design 2 – Card Grid) ===== */
         /* ===== Pantry (Design 2 – Card Grid, robust) ===== */
-        var pantryBooted = false;  <!-- CHANGED FROM let TO var -->
+        let pantryBooted = false;
         function bootPantry() {
           if (pantryBooted) return;
           pantryBooted = true;
@@ -558,7 +624,6 @@
             return { amount: '', unit: DEFAULT_UNIT };
           }
 
-          // Support both sync and async implementations of RecipeSite.pantryList()
           async function loadItemsSafe() {
             try {
               if (!window.RecipeSite || !RecipeSite.pantryList) return [];
@@ -732,7 +797,6 @@
           renderQuick();
           renderList();
         }
-
 
         /* ===== Favourites ===== */
         async function renderFavourites(){
