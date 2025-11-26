@@ -178,7 +178,8 @@ supabase.from('recipes').select('*')
                    └──────────┬───────┘
          ┌────────────────────┼────────────────────┐
          ▼                    ▼                    ▼
- ┌─────────────┐     ┌────────────────┐     ┌────────────────┐
- │Auth System  │     │Database (SQL)  │     │Storage (Images)│
- │Email Login  │     │Recipes, Favs   │     │Images/Thumbnails│
- └─────────────┘     └────────────────┘     └────────────────┘
+  ┌─────────────┐     ┌────────────────┐     ┌────────────────┐
+  │Auth System  │     │Database (SQL)  │     │Storage (Images)│
+  │Email Login  │     │Recipes, Favs   │     │Images/Thumbnails│
+  └─────────────┘     └────────────────┘     └────────────────┘
+
