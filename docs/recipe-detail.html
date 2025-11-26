@@ -16,78 +16,459 @@
 
   <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"
-          onload="window.supabase = window.supabase.createClient(ENV_SUPABASE_URL, ENV_SUPABASE_KEY, {auth:{persistSession:true, autoRefreshToken:true}})"></script>
+          onload="
+            try {
+              window.supabase = window.supabase.createClient(
+                window.ENV_SUPABASE_URL,
+                window.ENV_SUPABASE_KEY,
+                { auth:{ persistSession:true, autoRefreshToken:true } }
+              );
+            } catch(e) { console.error('[supabase] init error', e); }
+          "></script>
 
-  <!-- Core -->
+  <!-- Core (RecipeSite, favourites, pantry, etc.) -->
   <script src="js/common.js" defer></script>
+
+  <style>
+    .alert{
+      margin:12px 0;
+      padding:10px 12px;
+      border:1px solid #e11;
+      border-radius:10px;
+      background:#fee;
+      color:#700;
+    }
+
+    /* Fancy back button */
+    .header-back{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:6px 14px;
+      border-radius:999px;
+      border:1px solid #e5e7eb;
+      background:#f9fafb;
+      color:#374151;
+      text-decoration:none;
+      font-size:0.9rem;
+      font-weight:500;
+      box-shadow:0 6px 14px rgba(15,23,42,0.06);
+      transition:
+        background-color .15s ease,
+        box-shadow .15s ease,
+        transform .10s ease;
+    }
+    .header-back-icon{
+      font-size:1rem;
+    }
+    .header-back:hover{
+      background:#eef2ff;
+      transform:translateY(-1px);
+      box-shadow:0 10px 20px rgba(15,23,42,0.09);
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      padding:3px 10px;
+      border-radius:999px;
+      font-size:0.8rem;
+      background:#f3f4f6;
+      color:#4b5563;
+      gap:6px;
+    }
+    .pill.owner{
+      background:#ecfdf3;
+      color:#15803d;
+    }
+
+    .meta-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      font-size:0.85rem;
+      color:#6b7280;
+      margin-top:6px;
+    }
+
+    .recipe-shell{
+      display:flex;
+      flex-direction:column;
+      gap:20px;
+    }
+
+    .recipe-hero-card{
+      padding:0;
+      overflow:hidden;
+      border-radius:18px;
+      border:1px solid #e5e7eb;
+      box-shadow:0 14px 30px rgba(15,23,42,0.08);
+      background:linear-gradient(145deg,#f9fafb,#ffffff);
+    }
+    .recipe-hero-media{
+      position:relative;
+      max-height:360px;
+      overflow:hidden;
+      background:#f3f4f6;
+    }
+    .recipe-hero-media img{
+      width:100%;
+      height:100%;
+      max-height:360px;
+      object-fit:cover;
+      display:block;
+    }
+    .recipe-hero-fallback{
+      height:260px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:#9ca3af;
+      font-size:0.95rem;
+    }
+    .recipe-hero-body{
+      padding:18px 18px 16px;
+    }
+    .recipe-hero-title-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:flex-start;
+      justify-content:space-between;
+    }
+    .recipe-hero-title{
+      margin:0;
+      font-size:1.6rem;
+      line-height:1.2;
+    }
+    .recipe-hero-actions{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      justify-content:flex-end;
+    }
+
+    .recipe-main-grid{
+      display:grid;
+      gap:18px;
+      grid-template-columns: minmax(0,2fr) minmax(0,1.3fr);
+      align-items:flex-start;
+    }
+    @media (max-width:900px){
+      .recipe-main-grid{
+        grid-template-columns:1fr;
+      }
+    }
+
+    .section-card{
+      border-radius:16px;
+      border:1px solid #e5e7eb;
+      background:#ffffff;
+      padding:16px 18px;
+      box-shadow:0 10px 24px rgba(15,23,42,0.06);
+    }
+    .section-card h2{
+      margin-top:0;
+      margin-bottom:8px;
+    }
+
+    .bullet{
+      padding-left:18px;
+    }
+    .num{
+      padding-left:20px;
+    }
+
+    .nutrition-list{
+      list-style:none;
+      padding:0;
+      margin:0;
+      display:grid;
+      gap:8px;
+    }
+    .nutrition-list li{
+      display:flex;
+      justify-content:space-between;
+      font-size:0.95rem;
+      padding:6px 8px;
+      border-radius:10px;
+      background:#f9fafb;
+    }
+    .nutrition-list strong{
+      font-weight:600;
+    }
+
+    .aside-note{
+      font-size:0.85rem;
+      color:#6b7280;
+      margin-top:8px;
+    }
+
+    .tiny-label{
+      font-size:0.75rem;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+      color:#9ca3af;
+      margin-bottom:4px;
+      display:block;
+    }
+  </style>
 </head>
 <body>
   <header class="site-head">
     <div class="container">
-      <nav class="nav"><a href="recipes.html#browse">← Back to Browse</a></nav>
+      <nav class="nav">
+        <a href="recipes.html#browse" class="header-back">
+          <span class="header-back-icon">←</span>
+          <span>Back to recipes</span>
+        </a>
+      </nav>
     </div>
   </header>
 
-  <main class="container">
-    <div id="alert" class="alert" hidden style="margin:12px 0;padding:10px 12px;border:1px solid #e11;border-radius:10px;background:#fee;color:#700"></div>
-    <article id="detail" class="recipe-detail">Loading…</article>
+  <main class="container" style="padding-top:20px;padding-bottom:24px;">
+    <div id="alert" class="alert" hidden></div>
+    <div id="detail">
+      <p class="muted">Loading recipe…</p>
+    </div>
   </main>
 
   <script>
-  document.addEventListener('DOMContentLoaded', async () => {
-    const alertBox = document.getElementById('alert');
-    const showAlert = (m)=>{ alertBox.textContent=m; alertBox.hidden=false; };
-    const el = document.getElementById('detail');
+    document.addEventListener('DOMContentLoaded', () => {
+      const alertBox = document.getElementById('alert');
+      const detailEl = document.getElementById('detail');
 
-    try{
-      if (!window.RecipeSite) throw new Error('App core not loaded.');
-      const id = new URLSearchParams(location.search).get('id');
-      if (!id) { el.innerHTML='<p class="muted">Missing recipe id.</p>'; return; }
+      const showAlert = (msg) => {
+        alertBox.textContent = msg;
+        alertBox.hidden = false;
+      };
+      const clearAlert = () => {
+        alertBox.hidden = true;
+        alertBox.textContent = '';
+      };
 
-      const r = await RecipeSite.getRecipeById(id);
-      if (!r) { el.innerHTML = '<p class="muted">Recipe not found (DB returned nothing).</p>'; return; }
+      function getRecipeId() {
+        const params = new URLSearchParams(location.search);
+        return params.get('id');
+      }
 
-      const imgHtml = r.image ? `<img class="hero-img" src="${r.image}" alt="${r.title}" />`
-                              : `<div class="noimg-badge" style="margin:8px 0">No image</div>`;
+      async function loadRecipe() {
+        const id = getRecipeId();
+        if (!id) {
+          showAlert('No recipe ID provided.');
+          detailEl.innerHTML = '';
+          return;
+        }
 
-      el.innerHTML = `
-        <header class="hero">
-          ${imgHtml}
-          <div class="hero-meta">
-            <h1>${r.title}</h1>
-            <span class="pill">${r.category || ''}</span>
-          </div>
-        </header>
+        if (!window.supabase) {
+          showAlert('Supabase client not ready.');
+          return;
+        }
 
-        <section class="card">
-          <h2>Ingredients</h2>
-          <ul class="ingredients">
-            ${(r.ingredients || []).map(i => `<li>${i}</li>`).join('') || '<li class="muted">No ingredients listed.</li>'}
-          </ul>
-        </section>
+        try {
+          clearAlert();
 
-        <section class="card">
-          <h2>Steps</h2>
-          <ol class="steps">
-            ${(r.steps || []).map(s => `<li>${s}</li>`).join('') || '<li class="muted">No steps provided.</li>'}
-          </ol>
-        </section>
+          // 1) Current user (may be null)
+          const { data: sessionRes, error: sessionErr } = await supabase.auth.getSession();
+          if (sessionErr && sessionErr.message !== 'Auth session missing!') {
+            console.warn('[getSession] error:', sessionErr.message);
+          }
+          const user = sessionRes?.session?.user || null;
 
-        <section class="card">
-          <h2>Nutrition (per serving)</h2>
-          <ul class="nutrition">
-            <li><strong>Calories:</strong> ${r.calories ?? 0}</li>
-            <li><strong>Protein:</strong> ${r.protein ?? 0} g</li>
-            <li><strong>Carbs:</strong> ${r.carbs ?? 0} g</li>
-            <li><strong>Fat:</strong> ${r.fat ?? 0} g</li>
-          </ul>
-        </section>
-      `;
-    }catch(e){
-      showAlert(e.message || String(e));
-      document.getElementById('detail').innerHTML = '';
-    }
-  });
+          // 2) Load recipe (including user_id for ownership)
+          const { data: recipe, error: rErr } = await supabase
+            .from('recipes')
+            .select('id, title, category, ingredients, steps, image, calories, protein, carbs, fat, user_id, created_at')
+            .eq('id', id)
+            .maybeSingle();
+
+          if (rErr) throw new Error(rErr.message);
+          if (!recipe) {
+            showAlert('Recipe not found.');
+            detailEl.innerHTML = '';
+            return;
+          }
+
+          const isOwner = !!(user && recipe.user_id && user.id === recipe.user_id);
+          const createdDate = recipe.created_at
+            ? new Date(recipe.created_at).toLocaleDateString()
+            : null;
+
+          const ingredients = Array.isArray(recipe.ingredients) ? recipe.ingredients : [];
+          const steps       = Array.isArray(recipe.steps)       ? recipe.steps       : [];
+
+          let isFav = false;
+          if (window.RecipeSite && RecipeSite.getFavSet) {
+            isFav = RecipeSite.getFavSet().has(String(recipe.id));
+          }
+
+          const imgHtml = recipe.image
+            ? `<img src="${recipe.image}" alt="${recipe.title}" loading="lazy" />`
+            : `<div class="recipe-hero-fallback">No image for this recipe yet</div>`;
+
+          const ownerChip = isOwner
+            ? `<span class="pill owner">Your recipe</span>`
+            : '';
+
+          const createdChip = createdDate
+            ? `<span class="pill">Added on ${createdDate}</span>`
+            : '';
+
+          const categoryChip = recipe.category
+            ? `<span class="pill">${recipe.category}</span>`
+            : '';
+
+          const ownerActionsHtml = isOwner ? `
+            <div class="row" style="margin-top: 8px; gap: 8px; align-items:center;">
+              <button id="deleteRecipeBtn"
+                      type="button"
+                      class="btn outline"
+                      style="border-color:#dc2626;color:#b91c1c;">
+                Delete recipe
+              </button>
+              <span class="small muted">Only you can see this button.</span>
+            </div>
+          ` : '';
+
+          const nutritionHtml = `
+            <ul class="nutrition-list">
+              <li><span>Calories</span><strong>${recipe.calories ?? 0}</strong></li>
+              <li><span>Protein</span><strong>${recipe.protein ?? 0} g</strong></li>
+              <li><span>Carbs</span><strong>${recipe.carbs ?? 0} g</strong></li>
+              <li><span>Fat</span><strong>${recipe.fat ?? 0} g</strong></li>
+            </ul>
+          `;
+
+          detailEl.innerHTML = `
+            <div class="recipe-shell">
+
+              <!-- HERO -->
+              <section class="recipe-hero-card card">
+                <div class="recipe-hero-media">
+                  ${imgHtml}
+                </div>
+                <div class="recipe-hero-body">
+                  <div class="recipe-hero-title-row">
+                    <div>
+                      <h1 class="recipe-hero-title">${recipe.title}</h1>
+                      <div class="meta-row">
+                        ${categoryChip}
+                        ${createdChip}
+                        ${ownerChip}
+                      </div>
+                    </div>
+                    <div class="recipe-hero-actions">
+                      <button id="favToggle"
+                              type="button"
+                              class="btn small"
+                              data-fav="${recipe.id}">
+                        ${isFav ? '✓ Saved' : '☆ Save'}
+                      </button>
+                    </div>
+                  </div>
+                  ${ownerActionsHtml}
+                </div>
+              </section>
+
+              <!-- MAIN GRID -->
+              <section class="recipe-main-grid">
+                <!-- LEFT: ingredients + steps -->
+                <div class="recipe-main-left" style="display:flex;flex-direction:column;gap:16px;">
+                  <section class="section-card">
+                    <h2>Ingredients</h2>
+                    ${
+                      ingredients.length
+                        ? `<ul class="bullet">${ingredients.map(i => `<li>${i}</li>`).join('')}</ul>`
+                        : '<p class="muted">No ingredients listed for this recipe yet.</p>'
+                    }
+                  </section>
+
+                  <section class="section-card">
+                    <h2>Steps</h2>
+                    ${
+                      steps.length
+                        ? `<ol class="num">${steps.map(s => `<li>${s}</li>`).join('')}</ol>`
+                        : '<p class="muted">No steps listed for this recipe yet.</p>'
+                    }
+                  </section>
+                </div>
+
+                <!-- RIGHT: nutrition + notes -->
+                <aside class="recipe-main-right" style="display:flex;flex-direction:column;gap:16px;">
+                  <section class="section-card">
+                    <h2>Nutrition</h2>
+                    ${nutritionHtml}
+                    <p class="aside-note">
+                      Values are per serving and for general guidance only.
+                    </p>
+                  </section>
+
+                  <section class="section-card">
+                    <span class="tiny-label">Tip</span>
+                    <p class="aside-note">
+                      Save this recipe to favourites so you can quickly find it from the
+                      <strong>Favourites</strong> tab next time.
+                    </p>
+                  </section>
+                </aside>
+              </section>
+            </div>
+          `;
+
+          // Favourite toggle
+          const favBtn = document.getElementById('favToggle');
+          if (favBtn && window.RecipeSite && RecipeSite.toggleFav) {
+            favBtn.addEventListener('click', async () => {
+              try {
+                const nowFav = await RecipeSite.toggleFav(String(recipe.id));
+                favBtn.textContent = nowFav ? '✓ Saved' : '☆ Save';
+              } catch (err) {
+                console.error('[favToggle] error:', err);
+              }
+            });
+          }
+
+          // Delete button (owner only)
+          const deleteBtn = document.getElementById('deleteRecipeBtn');
+          if (deleteBtn && isOwner) {
+            deleteBtn.addEventListener('click', async () => {
+              const ok = confirm('Delete this recipe? This cannot be undone.');
+              if (!ok) return;
+
+              try {
+                const { error: delErr } = await supabase
+                  .from('recipes')
+                  .delete()
+                  .eq('id', recipe.id); // RLS should still ensure only owner can delete
+
+                if (delErr) {
+                  console.error('[delete] error:', delErr.message);
+                  alert('Could not delete recipe: ' + delErr.message);
+                  return;
+                }
+
+                window.location.href = 'recipes.html#browse';
+              } catch (err) {
+                console.error('[delete] unexpected error:', err);
+                alert('Something went wrong deleting the recipe.');
+              }
+            });
+          }
+
+        } catch (e) {
+          console.error(e);
+          showAlert(e.message || String(e));
+          detailEl.innerHTML = '';
+        }
+      }
+
+      const check = setInterval(() => {
+        if (window.supabase) {
+          clearInterval(check);
+          loadRecipe();
+        }
+      }, 100);
+    });
   </script>
 </body>
 </html>

@@ -1,12 +1,88 @@
-.auth-body{min-height:100vh;display:grid;place-items:center;background:linear-gradient(180deg,var(--bg), color-mix(in srgb, var(--bg) 50%, var(--surface) 50%))}
-.auth-wrap{width:min(460px,92vw)}
-.auth-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:24px}
-.auth-brand{display:flex;align-items:center;gap:10px;font-weight:800;margin-bottom:6px}
-.auth-brand svg{color:var(--accent)}
-.auth-form{display:grid;gap:14px;margin-top:14px}
-.checkbox{display:flex;align-items:center;gap:8px}
-.link{color:#2563eb;text-decoration:none}
-.link:hover{text-decoration:underline}
-.small{font-size:.92rem}
-.auth-row{display:flex;align-items:center;justify-content:space-between}
-.auth-footer{margin-top:14px;text-align:center}
+/* Full-page layout: header on top, auth content centred */
+.auth-body{
+  min-height:100vh;
+  display:grid;
+  grid-template-rows:auto 1fr;        /* row 1 = header, row 2 = main */
+  align-items:start;
+  justify-items:stretch;              /* children stretch horizontally */
+  background:
+    radial-gradient(circle at top left, rgba(22,163,74,.08), transparent 55%),
+    radial-gradient(circle at bottom right, rgba(37,99,235,.05), transparent 55%),
+    var(--bg);
+}
+
+/* Make sure the header grid item stretches fully */
+.site-head{
+  justify-self:stretch;
+}
+
+/* Area that holds the login card */
+.auth-shell{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:40px 16px;
+}
+
+/* Inner wrapper so it doesn’t get too wide */
+.auth-wrap{
+  width:min(460px,92vw);
+}
+
+/* The white card itself */
+.auth-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  padding:24px;
+}
+
+/* Brand row at top of the card */
+.auth-brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-weight:800;
+  margin-bottom:6px;
+}
+.auth-brand svg{
+  color:var(--accent);
+}
+
+/* Form layout */
+.auth-form{
+  display:grid;
+  gap:14px;
+  margin-top:14px;
+}
+
+/* Misc bits */
+.checkbox{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.link{
+  color:#2563eb;
+  text-decoration:none;
+}
+.link:hover{
+  text-decoration:underline;
+}
+
+.small{
+  font-size:.92rem;
+}
+
+.auth-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+
+.auth-footer{
+  margin-top:14px;
+  text-align:center;
+}

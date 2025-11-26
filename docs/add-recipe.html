@@ -28,7 +28,7 @@
     <h1>Add a New Recipe</h1>
     <div id="alert" style="margin-bottom:12px;padding:10px;border-radius:8px;background:#fee;color:#c00;border:1px solid #e00" hidden></div>
 
-    <form id="addForm" class="card" style="display:grid; gap:24px;">
+    <form id="addForm" class="card" style="display:grid; gap:24px;" enctype="multipart/form-data">
       
       <!-- Basic Info -->
       <div class="row" style="gap:16px; flex-wrap:wrap;">
@@ -45,10 +45,11 @@
         </label>
       </div>
 
+      <!-- Image upload instead of URL -->
       <label class="field">
-        <span>Image URL</span>
-        <input id="rImg" type="url" placeholder="https://..." />
-        <small class="muted">Paste a link to an image from the web.</small>
+        <span>Image</span>
+        <input id="rImgFile" type="file" accept="image/*" />
+        <small class="muted">Upload a photo of your recipe (optional).</small>
       </label>
 
       <!-- Details -->
@@ -59,7 +60,7 @@
         </label>
         <label class="field" style="flex:1">
           <span>Steps (one per line)</span>
-          <textarea id="rSteps" rows="6" required placeholder="Mix ingredients.&#10;Bake at 350F.&#10;..."></textarea>
+          <textarea id="rSteps" rows="6" required placeholder="Mix ingredients.&#10;Bake at 180°C.&#10;..."></textarea>
         </label>
       </div>
 
@@ -83,9 +84,13 @@
       const alertBox = document.getElementById('alert');
       const form = document.getElementById('addForm');
 
-      function showErr(m) { alertBox.textContent=m; alertBox.hidden=false; window.scrollTo(0,0); }
+      function showErr(m) { 
+        alertBox.textContent = m; 
+        alertBox.hidden = false; 
+        window.scrollTo(0,0); 
+      }
 
-      // 1. Wait for auth check
+      // 1. Wait for auth check – user must be logged in to add recipes
       const check = setInterval(async () => {
         if (window.supabase) {
           clearInterval(check);
@@ -97,6 +102,48 @@
         }
       }, 100);
 
+      // Helper: upload image to Supabase Storage and return public URL
+      async function uploadRecipeImage(file) {
+        if (!file) return null;
+
+        // Make sure storage client exists
+        if (!window.supabase || !supabase.storage) {
+          throw new Error('Supabase storage is not available.');
+        }
+
+        // Get user id for path (fallback to "anon" if something weird happens)
+        let userId = null;
+        try {
+          const { data } = await supabase.auth.getUser();
+          userId = data?.user?.id || null;
+        } catch (e) {
+          console.warn('getUser failed in uploadRecipeImage', e);
+        }
+        const uid = userId || 'anon';
+
+        // Build a unique file path
+        const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+        const path = `${uid}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+        // Upload to bucket "recipes"
+        const { data, error } = await supabase
+          .storage
+          .from('recipes')
+          .upload(path, file);
+
+        if (error) {
+          console.error('Image upload error', error);
+          throw new Error('Image upload failed: ' + error.message);
+        }
+
+        const { data: publicData } = supabase
+          .storage
+          .from('recipes')
+          .getPublicUrl(data.path);
+
+        return publicData.publicUrl;
+      }
+
       // 2. Handle Submit
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -105,26 +152,45 @@
         try {
           const title = document.getElementById('rTitle').value.trim();
           const cat = document.getElementById('rCat').value.trim();
-          const img = document.getElementById('rImg').value.trim();
-          
+          const fileInput = document.getElementById('rImgFile');
+          const file = fileInput.files && fileInput.files[0];
+
           // Split textareas by newlines and remove empty lines
-          const ingredients = document.getElementById('rIng').value.split('\n').map(s=>s.trim()).filter(s=>s);
-          const steps = document.getElementById('rSteps').value.split('\n').map(s=>s.trim()).filter(s=>s);
+          const ingredients = document.getElementById('rIng').value
+            .split('\n').map(s=>s.trim()).filter(s=>s);
+          const steps = document.getElementById('rSteps').value
+            .split('\n').map(s=>s.trim()).filter(s=>s);
 
           const calories = parseInt(document.getElementById('nCal').value) || 0;
           const protein = parseInt(document.getElementById('nPro').value) || 0;
           const carbs = parseInt(document.getElementById('nCarb').value) || 0;
           const fat = parseInt(document.getElementById('nFat').value) || 0;
 
+          if (!title || !cat) {
+            showErr('Please fill in the title and category.');
+            return;
+          }
           if (!ingredients.length || !steps.length) {
             showErr('Please provide at least one ingredient and one step.');
             return;
           }
 
+          // Upload image if provided
+          let imageUrl = null;
+          if (file) {
+            imageUrl = await uploadRecipeImage(file);
+          }
+
           const payload = {
-            title, category: cat, image: img || null,
-            ingredients, steps,
-            calories, protein, carbs, fat
+            title,
+            category: cat,
+            image: imageUrl,
+            ingredients,
+            steps,
+            calories,
+            protein,
+            carbs,
+            fat
           };
 
           const newRecipe = await RecipeSite.addRecipe(payload);
@@ -132,7 +198,7 @@
           if (newRecipe && newRecipe.id) {
              window.location.href = 'recipe-detail.html?id=' + newRecipe.id;
           } else {
-             // If RLS allows insert but doesn't return rows (common config), we just go back to list
+             // If RLS allows insert but doesn't return rows, just go back to list
              window.location.href = 'recipes.html#browse';
           }
 

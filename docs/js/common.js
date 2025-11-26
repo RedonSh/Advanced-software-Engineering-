@@ -3,7 +3,7 @@
    - Recipes: Supabase
    - Favourites: localStorage + (if logged in) Supabase "user_favorites"
    - Pantry: localStorage + (if logged in) Supabase "pantry"
-   - Add Recipe: Supabase insert
+   - Add Recipe: Supabase insert with user_id
    ========================================================================= */
 
 const $$  = (s, c=document)=>c.querySelector(s);
@@ -359,7 +359,7 @@ async function dbListRecipes() {
     .from('recipes')
     .select(
       'id, title, category, ingredients, steps, image, ' +
-      'calories, protein, carbs, fat, created_at'
+      'calories, protein, carbs, fat, created_at, user_id'
     )
     .order('created_at', { ascending: false });
   if (error) throw new Error('DB listRecipes: ' + error.message);
@@ -372,7 +372,7 @@ async function dbGetRecipeById(id) {
     .from('recipes')
     .select(
       'id, title, category, ingredients, steps, image, ' +
-      'calories, protein, carbs, fat'
+      'calories, protein, carbs, fat, user_id'
     )
     .eq('id', id)
     .maybeSingle();
@@ -392,10 +392,18 @@ async function dbListCategories() {
 
 async function dbAddRecipe(recipeData) {
   assertClient();
+
+  // Attach user_id so recipes are user-based like pantry/favourites
+  const payload = {
+    ...recipeData,
+    user_id: currentUserId || null   // RLS should usually require non-null
+  };
+
   const { data, error } = await supabase
     .from('recipes')
-    .insert([recipeData])
+    .insert([payload])
     .select();
+
   if (error) throw new Error(error.message);
   return data ? data[0] : null;
 }
