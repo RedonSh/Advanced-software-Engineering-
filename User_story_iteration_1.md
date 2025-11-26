@@ -113,8 +113,10 @@ Iteration 1 implemented the working login, pantry, and recipe generation logic t
 ---
 
 # Completed
+Website logo ![alt text](Our_Recipes.png)
 
 <img width="443" height="552" alt="image" src="https://github.com/user-attachments/assets/2c29dd98-5084-487a-b85c-c83a356d8e40" />
 <img width="278" height="562" alt="image" src="https://github.com/user-attachments/assets/11e7f8d1-183e-4833-84d0-8c516d867f57" />
 <img width="860" height="575" alt="image" src="https://github.com/user-attachments/assets/37acdd36-3a4f-48ea-bbf7-ebb2ce1f61da" />
 
+<img width="500" height="500" alt="Our_Recipes" src="https://github.com/user-attachments/assets/753a6601-97e9-47a7-8ade-dc186400608c" />
