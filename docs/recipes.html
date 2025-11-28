@@ -507,18 +507,111 @@
           nextBtn.disabled = start + state.pageSize >= state.filtered.length;
         }
 
-        function surpriseMe() {
-          const currentPool = state.filtered.length > 0 && !state.randomMode ? state.filtered : state.all;
-          if (currentPool.length === 0) return alert('No recipes available to choose from!');
-          
-          const shuffled = [...currentPool].sort(() => 0.5 - Math.random());
-          const picks = shuffled.slice(0, 3);
-          
-          state.filtered = picks;
-          state.randomMode = true;
-          resetBtn.hidden = false;
-          paginate();
-        }
+// --- NEW Surprise Me: generate brand-new AI recipes ---
+async function surpriseMe() {
+  try {
+    // Build pantry list for AI (can be empty)
+    const pantryForAI = Array.isArray(browsePantryNames)
+      ? browsePantryNames.filter(Boolean)
+      : [];
+
+const resp = await fetch(
+  "https://bhqeasmtrdfqncliipki.supabase.co/functions/v1/ai-generate-recipes",
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: window.ENV_SUPABASE_KEY,
+      Authorization: `Bearer ${window.ENV_SUPABASE_KEY}`,
+    },
+    body: JSON.stringify({ pantry: pantryForAI }),
+  }
+);
+
+
+    if (!resp.ok) {
+      throw new Error("AI function returned status " + resp.status);
+    }
+
+const data = await resp.json();
+
+// Helpful logs:
+if (data.source === 'fallback') {
+  console.warn('AI fallback reason from edge function:', data.reason);
+}
+
+const aiRecipes = Array.isArray(data.recipes) ? data.recipes : [];
+
+
+    if (!aiRecipes.length) {
+      throw new Error("AI returned no recipes");
+    }
+
+    // Save each AI recipe into Supabase via your existing helper
+    const saved = [];
+    for (const r of aiRecipes) {
+const payload = {
+  title: (r.title || "AI Surprise Recipe").toString(),
+  category: (r.category || "AI Surprise").toString(),
+  image: r.image ? String(r.image) : null,   // <-- THIS
+  ingredients: Array.isArray(r.ingredients) ? r.ingredients.map(String) : [],
+  steps: Array.isArray(r.steps) ? r.steps.map(String) : [],
+  calories: Number.isFinite(r.calories) ? r.calories : 0,
+  protein: Number.isFinite(r.protein) ? r.protein : 0,
+  carbs: Number.isFinite(r.carbs) ? r.carbs : 0,
+  fat: Number.isFinite(r.fat) ? r.fat : 0,
+};
+
+
+
+
+      const created = await RecipeSite.addRecipe(payload);
+      if (created && created.id) {
+        saved.push(created);
+      }
+    }
+
+    if (!saved.length) {
+      throw new Error("Could not save AI recipes");
+    }
+
+    // Prepend AI recipes into your all-recipes list
+    state.all = [...saved, ...state.all];
+
+    // Recalculate pantry matches for everything so "Uses X item(s)" still works
+    if (typeof refreshBrowsePantryMatches === "function") {
+      await refreshBrowsePantryMatches(state.all);
+    }
+
+    // Show ONLY the newly created AI recipes as the surprise result
+    state.filtered = saved;
+    state.randomMode = true;
+    resetBtn.hidden = false;
+    paginate();
+  } catch (err) {
+    console.error("AI Surprise failed, using random fallback:", err);
+
+    // Fallback: your old random behaviour so the button never feels broken
+    const currentPool =
+      state.filtered.length > 0 && !state.randomMode
+        ? state.filtered
+        : state.all;
+
+    if (!currentPool.length) {
+      alert("No recipes available to choose from!");
+      return;
+    }
+
+    const shuffled = [...currentPool].sort(() => 0.5 - Math.random());
+    const picks = shuffled.slice(0, 3);
+
+    state.filtered = picks;
+    state.randomMode = true;
+    resetBtn.hidden = false;
+    paginate();
+  }
+}
+
 
         async function bootBrowse(){
           try{
